@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('photon', {
   run: (action) => ipcRenderer.invoke('action:run', action),
   getSnapshot: () => ipcRenderer.invoke('capture:last'),
   close: () => ipcRenderer.invoke('window:close'),
+  minimize: () => ipcRenderer.invoke('window:minimize'),
+  fit: (height) => ipcRenderer.invoke('window:fit', height),
   quit: () => ipcRenderer.invoke('app:quit'),
   on: (channel, callback) => {
     if (!PUSH.includes(channel)) return

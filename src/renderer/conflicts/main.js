@@ -2,8 +2,10 @@
 // whose colors look alike to the user. Both areas of a pair carry the same
 // number.
 
-import { photon, inBrowser, showBrowserBanner, loadImage } from '../shared/api.js'
+import { photon, inBrowser, showBrowserBanner, loadImage, markPlatform } from '../shared/api.js'
 import { findConflicts, colorName } from '../../engine/index.js'
+
+markPlatform()
 
 const $ = (id) => document.getElementById(id)
 const ANALYSIS_WIDTH = 480

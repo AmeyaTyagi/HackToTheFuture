@@ -1,4 +1,4 @@
-import { BrowserWindow, screen } from 'electron'
+import { BrowserWindow, nativeTheme, screen } from 'electron'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -134,6 +134,13 @@ export function createTest() {
     fullscreenable: false,
     title: 'Photon Vision Test',
     autoHideMenuBar: true,
+    // Shown behind the page where the system has no window material.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#282828' : '#ececec',
+    // macOS: native traffic lights over the page, window-tinted material.
+    // Elsewhere: no system frame; the page draws a macOS-style title bar.
+    ...(isMac
+      ? { titleBarStyle: 'hiddenInset', vibrancy: 'under-window', visualEffectState: 'active' }
+      : { frame: false, backgroundMaterial: 'mica' }),
     webPreferences,
   })
   win.setMenuBarVisibility(false)

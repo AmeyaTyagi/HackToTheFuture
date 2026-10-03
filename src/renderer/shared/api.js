@@ -43,6 +43,8 @@ function createStub() {
     close: async () => {
       location.href = '../'
     },
+    minimize: async () => {},
+    fit: async () => {},
     quit: async () => {},
     on: (channel, callback) => {
       if (channel === 'state:changed') listeners.push(callback)
@@ -52,6 +54,12 @@ function createStub() {
 
 export const inBrowser = !window.photon
 export const photon = window.photon ?? createStub()
+
+// Marks <html> with where the page runs, so styles can adapt:
+// in-app or in-browser, plus platform-darwin, platform-win32 or platform-linux.
+export function markPlatform() {
+  document.documentElement.classList.add(inBrowser ? 'in-browser' : 'in-app', `platform-${photon.platform}`)
+}
 
 export function showBrowserBanner(text = 'Preview in a browser. Recoloring the real screen needs the Photon desktop app.') {
   if (!inBrowser) return

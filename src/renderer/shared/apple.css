@@ -1,37 +1,77 @@
-/* Shared look for every Photon screen, modelled on Apple's interface style. */
+/* Shared look for every Photon screen, modelled on macOS: Control Center
+   tiles, System Settings lists, native-sized controls and hairline rules. */
 
 :root {
   color-scheme: light dark;
-  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
-  --bg: rgba(246, 246, 248, 0.74);
-  --bg-solid: #f5f5f7;
-  --card: rgba(255, 255, 255, 0.72);
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI Variable Text', 'Segoe UI',
+    system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Segoe UI Variable Display',
+    'Segoe UI', system-ui, sans-serif;
+
+  /* Window material and surfaces */
+  --bg: rgba(236, 236, 236, 0.8);
+  --bg-solid: #ececec;
+  --card: rgba(255, 255, 255, 0.64);
   --card-solid: #ffffff;
-  --text: #1d1d1f;
-  --text-2: #6e6e73;
-  --line: rgba(60, 60, 67, 0.14);
-  --fill: rgba(120, 120, 128, 0.16);
+  --seg-on: #ffffff;
+
+  /* Labels */
+  --text: rgba(0, 0, 0, 0.85);
+  --text-2: rgba(0, 0, 0, 0.5);
+  --text-3: rgba(0, 0, 0, 0.26);
+
+  /* Lines and fills */
+  --line: rgba(0, 0, 0, 0.1);
+  --line-strong: rgba(0, 0, 0, 0.18);
+  --fill: rgba(0, 0, 0, 0.05);
+  --fill-2: rgba(0, 0, 0, 0.1);
+  --fill-3: rgba(0, 0, 0, 0.16);
+  --knob: #ffffff;
+
+  /* System colors */
   --accent: #007aff;
-  --green: #34c759;
+  --accent-text: #ffffff;
+  --green: #28cd41;
   --red: #ff3b30;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
-  --radius: 12px;
+  --orange: #ff9500;
+  --yellow: #ffcc00;
+  --blue: #007aff;
+  --purple: #af52de;
+  --gray: #8e8e93;
+
+  --shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 10px 30px rgba(0, 0, 0, 0.18);
+  --shadow-sm: 0 0 0 0.5px var(--line), 0 1px 2px rgba(0, 0, 0, 0.05);
+  --radius: 10px;
+  --radius-lg: 14px;
+  --focus: 0 0 0 3.5px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: rgba(30, 30, 32, 0.72);
-    --bg-solid: #1c1c1e;
-    --card: rgba(58, 58, 60, 0.6);
-    --card-solid: #2c2c2e;
-    --text: #f5f5f7;
-    --text-2: #a1a1a6;
-    --line: rgba(235, 235, 245, 0.16);
-    --fill: rgba(120, 120, 128, 0.32);
+    --bg: rgba(40, 40, 40, 0.8);
+    --bg-solid: #282828;
+    --card: rgba(255, 255, 255, 0.07);
+    --card-solid: #363636;
+    --seg-on: rgba(255, 255, 255, 0.2);
+    --text: rgba(255, 255, 255, 0.87);
+    --text-2: rgba(255, 255, 255, 0.55);
+    --text-3: rgba(255, 255, 255, 0.28);
+    --line: rgba(255, 255, 255, 0.1);
+    --line-strong: rgba(255, 255, 255, 0.18);
+    --fill: rgba(255, 255, 255, 0.07);
+    --fill-2: rgba(255, 255, 255, 0.12);
+    --fill-3: rgba(255, 255, 255, 0.18);
+    --knob: #e9e9ea;
     --accent: #0a84ff;
-    --green: #30d158;
+    --green: #32d74b;
     --red: #ff453a;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --orange: #ff9f0a;
+    --yellow: #ffd60a;
+    --blue: #0a84ff;
+    --purple: #bf5af2;
+    --gray: #98989d;
+    --shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 10px 30px rgba(0, 0, 0, 0.45);
+    --shadow-sm: 0 0 0 0.5px var(--line), 0 1px 2px rgba(0, 0, 0, 0.25);
   }
 }
 
@@ -48,10 +88,11 @@ body {
 body {
   font-family: var(--font);
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1.385;
   color: var(--text);
   background: var(--bg-solid);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   user-select: none;
   cursor: default;
 }
@@ -62,26 +103,113 @@ p {
   margin: 0;
 }
 
-.label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--text-2);
-  margin: 0 4px 6px;
+h1,
+h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }
 
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Group header, as above each block in Control Center */
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin: 0 2px 6px;
+}
+
+/* Inset grouped surface */
 .card {
   background: var(--card);
   border-radius: var(--radius);
-  box-shadow: 0 0 0 0.5px var(--line);
+  box-shadow: var(--shadow-sm);
 }
 
-/* iOS-style switch */
+/* System Settings style rows: icon badge, label, detail, chevron */
+.list {
+  overflow: hidden;
+}
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 10px 6px 12px;
+  border: 0;
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  cursor: default;
+}
+.row + .row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 44px;
+  height: 0.5px;
+  background: var(--line);
+}
+.list.plain .row + .row::before {
+  left: 12px;
+}
+.row:hover {
+  background: var(--fill);
+}
+.row:active {
+  background: var(--fill-2);
+}
+.row .row-text {
+  flex: 1;
+  min-width: 0;
+}
+.row .detail,
+.row kbd {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.row .chevron {
+  width: 8px;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--text-3);
+  margin-top: -2px;
+}
+
+/* 22px rounded-square icon on a system color, as in the Settings sidebar */
+.icon-badge {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 6px;
+  color: #fff;
+  background: var(--badge, var(--gray));
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 0.5px 1px rgba(0, 0, 0, 0.2);
+}
+.icon-badge svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* macOS switch */
 .switch {
   position: relative;
-  width: 51px;
-  height: 31px;
+  width: 34px;
+  height: 20px;
   flex: none;
 }
 .switch input {
@@ -89,14 +217,17 @@ p {
   inset: 0;
   opacity: 0;
   margin: 0;
-  cursor: pointer;
+  cursor: default;
 }
 .switch span {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: var(--fill);
-  transition: background 0.2s;
+  background: var(--fill-3);
+  box-shadow: inset 0 0 0 0.5px var(--line);
+  transition:
+    background 0.18s,
+    box-shadow 0.18s;
   pointer-events: none;
 }
 .switch span::after {
@@ -104,98 +235,231 @@ p {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 27px;
-  height: 27px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
-  transition: transform 0.2s;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 .switch input:checked + span {
-  background: var(--green);
+  background: var(--accent);
+  box-shadow: none;
 }
 .switch input:checked + span::after {
-  transform: translateX(20px);
+  transform: translateX(14px);
+}
+.switch input:disabled + span {
+  opacity: 0.45;
 }
 .switch input:focus-visible + span {
-  outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  outline-offset: 2px;
+  box-shadow: var(--focus);
 }
 
 /* Segmented control */
 .segmented {
   display: flex;
   padding: 2px;
-  border-radius: 9px;
-  background: var(--fill);
+  border-radius: 7px;
+  background: var(--fill-2);
+  box-shadow: inset 0 0 0 0.5px var(--line);
 }
 .segmented button {
   flex: 1;
   border: 0;
-  padding: 6px 12px;
-  border-radius: 7px;
+  padding: 3px 12px;
+  border-radius: 5px;
   font: inherit;
   font-weight: 500;
   color: var(--text);
   background: transparent;
-  cursor: pointer;
+  cursor: default;
 }
 .segmented button[aria-pressed='true'] {
-  background: var(--card-solid);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+  background: var(--seg-on);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.04),
+    0 1px 3px rgba(0, 0, 0, 0.14);
 }
 
-/* Slider */
+/* Slider: standard macOS form, 4px track and a round white knob */
 input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 28px;
+  height: 24px;
   margin: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: default;
 }
 input[type='range']::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
-  background: linear-gradient(to right, var(--accent) var(--fill-pct, 50%), var(--fill) var(--fill-pct, 50%));
+  background: linear-gradient(to right, var(--accent) var(--fill-pct, 50%), var(--fill-3) var(--fill-pct, 50%));
 }
 input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 24px;
-  height: 24px;
-  margin-top: -10px;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.22);
+  background: var(--knob);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.25);
 }
 input[type='range']:disabled {
   opacity: 0.4;
 }
+input[type='range']:focus-visible {
+  outline: none;
+}
+input[type='range']:focus-visible::-webkit-slider-thumb {
+  box-shadow: var(--focus);
+}
 
-/* Buttons */
+/* Control Center slider: a tall pill that fills from the left */
+input[type='range'].cc {
+  height: 22px;
+  border-radius: 11px;
+  background: var(--fill-3);
+  box-shadow: inset 0 0 0 0.5px var(--line);
+  overflow: hidden;
+}
+input[type='range'].cc::-webkit-slider-runnable-track {
+  height: 22px;
+  border-radius: 11px;
+  background: linear-gradient(to right, #fff var(--fill-pct, 50%), transparent var(--fill-pct, 50%));
+}
+input[type='range'].cc::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  margin-top: 0;
+  background: #fff;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+}
+
+/* Push buttons */
 .button {
   border: 0;
-  padding: 9px 18px;
-  border-radius: 10px;
+  padding: 4px 14px;
+  min-height: 24px;
+  border-radius: 6px;
   font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
+  font-weight: 500;
+  color: var(--accent-text);
   background: var(--accent);
-  cursor: pointer;
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.28),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    0 0.5px 1.5px rgba(0, 0, 0, 0.2);
+  cursor: default;
 }
 .button.secondary {
-  color: var(--accent);
-  background: var(--fill);
+  color: var(--text);
+  background: var(--card-solid);
+  box-shadow:
+    0 0 0 0.5px var(--line-strong),
+    0 0.5px 1.5px rgba(0, 0, 0, 0.12);
+}
+.button.large {
+  padding: 7px 20px;
+  min-height: 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
 }
 .button:active {
-  opacity: 0.75;
+  filter: brightness(0.9);
+}
+.button.secondary:active {
+  background: var(--fill-2);
+  filter: none;
+}
+.button.link {
+  padding: 0;
+  min-height: 0;
+  color: var(--accent);
+  background: none;
+  box-shadow: none;
+  font-weight: 400;
 }
 .button:focus-visible,
-.segmented button:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  outline-offset: 2px;
+.segmented button:focus-visible,
+.row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+/* Title bar for frameless windows: traffic lights on the left, title centred.
+   On macOS the real traffic lights sit in the same spot, so ours are hidden. */
+.titlebar {
+  position: relative;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  -webkit-app-region: drag;
+}
+html.in-app .titlebar {
+  display: flex;
+}
+.traffic-lights {
+  position: absolute;
+  top: 0;
+  left: 13px;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+html.platform-darwin .traffic-lights {
+  visibility: hidden;
+}
+.tl {
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--tl, #d6d6d6);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.14);
+  color: rgba(0, 0, 0, 0.55);
+  cursor: default;
+}
+.tl.close {
+  --tl: #ff5f57;
+}
+.tl.minimize {
+  --tl: #febc2e;
+}
+.tl.zoom {
+  --tl: #28c840;
+}
+.tl.disabled,
+.tl:disabled {
+  --tl: var(--fill-3);
+}
+.tl svg {
+  width: 8px;
+  height: 8px;
+  opacity: 0;
+}
+.traffic-lights:hover .tl:not(:disabled) svg {
+  opacity: 1;
+}
+.tl:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
 }
 
 /* Shown only when a page is opened in a plain browser. */
@@ -206,10 +470,11 @@ input[type='range']:disabled {
   transform: translateX(-50%);
   z-index: 100;
   max-width: calc(100vw - 32px);
-  padding: 8px 14px;
+  padding: 7px 14px;
   border-radius: 999px;
   font-size: 12px;
   color: #fff;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(20px);
+  background: rgba(30, 30, 30, 0.82);
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px) saturate(180%);
 }

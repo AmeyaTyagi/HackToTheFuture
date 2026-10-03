@@ -293,6 +293,16 @@ function registerIpc() {
     if (win === panel) panel.hide()
     else win?.close()
   })
+  ipcMain.handle('window:minimize', (event) => BrowserWindow.fromWebContents(event.sender)?.minimize())
+  // The panel asks for the height its content needs, so it never clips or
+  // leaves empty space whatever the platform's fonts do.
+  ipcMain.handle('window:fit', (event, height) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win !== panel || !Number.isFinite(height)) return
+    const [width] = panel.getSize()
+    panel.setSize(width, Math.max(200, Math.round(height)))
+    placePanel(panel, tray?.getBounds())
+  })
   ipcMain.handle('app:quit', () => app.quit())
 }
 
