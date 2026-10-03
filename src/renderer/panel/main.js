@@ -7,10 +7,17 @@ markPlatform()
 if (inBrowser) $('quit').parentElement.hidden = true
 showBrowserBanner()
 
-// Size the window to the content.
+// Size the window to the content. Only a change in height is reported;
+// the width is fixed, and a resize of the window must not echo back.
 if (!inBrowser) {
   const panel = document.querySelector('.panel')
-  new ResizeObserver(() => photon.fit(panel.getBoundingClientRect().height)).observe(panel)
+  let reported = 0
+  new ResizeObserver(() => {
+    const height = Math.ceil(panel.getBoundingClientRect().height)
+    if (height === reported) return
+    reported = height
+    photon.fit(height)
+  }).observe(panel)
 }
 
 for (const kbd of document.querySelectorAll('kbd[data-key]')) kbd.textContent = mod + kbd.dataset.key

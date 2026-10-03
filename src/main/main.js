@@ -313,6 +313,10 @@ function registerIpc() {
   ipcMain.handle('window:minimize', (event) => BrowserWindow.fromWebContents(event.sender)?.minimize())
   // The panel asks for the height its content needs, so it never clips or
   // leaves empty space whatever the platform's fonts do.
+  // Only the height follows the content. The width is pinned, and nothing
+  // happens when the height is already right: on Windows the size read back
+  // from a window can differ by a pixel or two from the size that was set,
+  // and resizing on every report would grow the panel without end.
   ipcMain.handle('window:fit', (event, height) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win !== panel || !Number.isFinite(height)) return
