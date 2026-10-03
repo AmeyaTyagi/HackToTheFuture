@@ -1,9 +1,11 @@
 // Color names: a small label by the cursor that says what color is under it.
 // In the desktop app the main process moves this window and sends the color.
 
-import { photon, inBrowser, showBrowserBanner } from '../shared/api.js'
+import { photon, inBrowser, showBrowserBanner, markPlatform } from '../shared/api.js'
 import { makeSample } from '../shared/sample.js'
 import { colorName, toHex } from '../../engine/index.js'
+
+markPlatform()
 
 const $ = (id) => document.getElementById(id)
 

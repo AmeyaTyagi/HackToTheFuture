@@ -51,6 +51,17 @@ export async function runSelfTest({
     check(`screen backend "${backend.name}" started`, !status.backendError, status.backendError ?? '')
     check('all shortcuts registered', status.shortcutErrors.length === 0, status.shortcutErrors.join(', '))
 
+    // The panel opens at launch and may resize or hide at any moment, which
+    // would change the screen between the captures compared below.
+    // It shows itself when its page finishes loading, so wait for that first.
+    const opening = getPanel()
+    if (opening.webContents.isLoading()) {
+      await new Promise((resolve) => opening.webContents.once('did-finish-load', resolve))
+    }
+    await sleep(800)
+    opening.hide()
+    await sleep(400)
+
     // Correction. A red and green card guarantees there is color on screen
     // to change; a gray screen looks the same corrected or not.
     const card = new BrowserWindow({

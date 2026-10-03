@@ -1,7 +1,7 @@
 // Vision test: shows the plates, collects answers, and offers to apply the
 // resulting type and strength to Photon.
 
-import { photon, showBrowserBanner } from '../shared/api.js'
+import { photon, markPlatform, showBrowserBanner } from '../shared/api.js'
 import { createTest, plateColors, LADDER } from '../../engine/index.js'
 
 const $ = (id) => document.getElementById(id)
@@ -113,6 +113,10 @@ for (let digit = 0; digit <= 9; digit++) {
   button.addEventListener('click', () => answer(String(digit)))
   $('keypad').append(button)
 }
+
+markPlatform()
+$('tl-close').addEventListener('click', () => photon.close())
+$('tl-minimize').addEventListener('click', () => photon.minimize())
 
 $('start').addEventListener('click', begin)
 $('retry').addEventListener('click', begin)

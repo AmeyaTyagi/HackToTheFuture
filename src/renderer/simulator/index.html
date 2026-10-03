@@ -60,12 +60,13 @@
       }
       .pill {
         position: absolute;
-        padding: 8px 14px;
+        padding: 7px 14px;
         border-radius: 999px;
-        font-size: 15px;
+        font-size: 13px;
         font-weight: 600;
         color: #fff;
-        background: rgba(0, 0, 0, 0.62);
+        background: rgba(30, 30, 30, 0.72);
+        box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.18), 0 4px 16px rgba(0, 0, 0, 0.35);
         backdrop-filter: blur(24px) saturate(180%);
       }
       #left-label {
@@ -88,22 +89,22 @@
         justify-content: center;
         max-width: calc(100vw - 32px);
         padding: 8px;
-        border-radius: 16px;
+        border-radius: 14px;
         color: #fff;
-        background: rgba(40, 40, 44, 0.72);
+        background: rgba(40, 40, 42, 0.74);
         backdrop-filter: blur(30px) saturate(180%);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.18), 0 10px 30px rgba(0, 0, 0, 0.45);
       }
       #bar .segmented {
-        background: rgba(120, 120, 128, 0.36);
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
       }
       #bar .segmented button {
         color: #fff;
         white-space: nowrap;
       }
       #bar .segmented button[aria-pressed='true'] {
-        color: #1d1d1f;
-        background: #fff;
+        background: rgba(255, 255, 255, 0.24);
       }
       #boost-control {
         display: flex;
@@ -126,20 +127,24 @@
       }
       #close {
         border: 0;
-        width: 30px;
-        height: 30px;
+        width: 26px;
+        height: 26px;
         border-radius: 50%;
-        font-size: 15px;
+        font-size: 13px;
         color: #fff;
-        background: rgba(120, 120, 128, 0.36);
-        cursor: pointer;
+        background: rgba(255, 255, 255, 0.14);
+        box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+        cursor: default;
+      }
+      #close:hover {
+        background: rgba(255, 255, 255, 0.22);
       }
       #message {
         position: absolute;
         inset: 0;
         display: grid;
         place-items: center;
-        font-size: 17px;
+        font-size: 15px;
         color: #fff;
       }
     </style>

@@ -2,9 +2,11 @@
 // Left of the divider: what the chosen color vision sees without Photon.
 // Right of it: what the same person sees with Photon on.
 
-import { photon, inBrowser, showBrowserBanner, loadImage } from '../shared/api.js'
+import { photon, inBrowser, showBrowserBanner, loadImage, markPlatform } from '../shared/api.js'
 import { makeSample } from '../shared/sample.js'
 import { simulate, correct, recolor } from '../../engine/index.js'
+
+markPlatform()
 
 const $ = (id) => document.getElementById(id)
 const left = $('left')

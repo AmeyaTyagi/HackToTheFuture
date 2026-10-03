@@ -10,136 +10,178 @@
         background: var(--bg);
         overflow: hidden;
       }
-      /* In a browser the panel is shown as a floating card. */
+      /* The window is transparent on macOS, so the page draws its own corners. */
+      html.platform-darwin body {
+        border-radius: 14px;
+      }
+      /* In a browser the panel is shown as a floating card on a desktop. */
       html.in-browser body {
         display: grid;
         place-items: center;
-        background: linear-gradient(135deg, #a1c4fd, #c2e9fb 45%, #fbc2eb);
+        background:
+          radial-gradient(60% 50% at 20% 20%, #ffd3a5 0%, transparent 60%),
+          radial-gradient(50% 60% at 80% 30%, #a8c0ff 0%, transparent 60%),
+          radial-gradient(60% 50% at 50% 90%, #ffb7d5 0%, transparent 60%),
+          #cfd6e6;
       }
       html.in-browser .panel {
         width: 340px;
-        border-radius: 18px;
+        border-radius: 14px;
         background: var(--bg);
         backdrop-filter: blur(40px) saturate(180%);
         box-shadow: var(--shadow);
       }
       .panel {
-        padding: 16px;
+        padding: 14px 14px 12px;
         display: flex;
         flex-direction: column;
         gap: 14px;
       }
+
       header {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
+        padding: 0 2px;
         -webkit-app-region: drag;
       }
       header .switch {
         -webkit-app-region: no-drag;
       }
       .ring {
-        width: 34px;
-        height: 34px;
+        width: 30px;
+        height: 30px;
         flex: none;
         border-radius: 50%;
         background: conic-gradient(#ff3b30, #ff9500, #ffcc00, #34c759, #00c7be, #007aff, #af52de, #ff3b30);
-        mask: radial-gradient(circle, transparent 42%, #000 44%);
-      }
-      header h1 {
-        font-size: 17px;
-        font-weight: 600;
-      }
-      header p {
-        font-size: 12px;
-        color: var(--text-2);
+        mask: radial-gradient(circle, transparent 40%, #000 42%);
       }
       header div {
         flex: 1;
+        min-width: 0;
       }
+      header h1 {
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+      header p {
+        font-size: 11px;
+        color: var(--text-2);
+      }
+
+      /* Control Center tiles */
       .types {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
       }
       .types button {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        column-gap: 9px;
+        align-items: center;
         text-align: left;
         border: 0;
-        padding: 9px 12px;
-        border-radius: 10px;
+        padding: 9px 10px;
+        border-radius: var(--radius);
         font: inherit;
         color: var(--text);
         background: var(--card);
-        box-shadow: 0 0 0 0.5px var(--line);
-        cursor: pointer;
+        box-shadow: var(--shadow-sm);
+        cursor: default;
       }
-      .types button strong {
-        display: block;
+      .types button:active {
+        filter: brightness(0.94);
+      }
+      .types .dot {
+        grid-row: 1 / 3;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--c);
+        box-shadow:
+          inset 0 0 0 0.5px rgba(0, 0, 0, 0.1),
+          inset 0 -5px 8px rgba(0, 0, 0, 0.18);
+      }
+      .types .dot.protan {
+        --c: linear-gradient(135deg, #ff6a5c, #c8201a);
+      }
+      .types .dot.deutan {
+        --c: linear-gradient(135deg, #5be16f, #1f9a39);
+      }
+      .types .dot.tritan {
+        --c: linear-gradient(135deg, #5fb3ff, #0a5fd1);
+      }
+      .types .dot.achroma {
+        --c: linear-gradient(135deg, #d8d8dc, #6c6c70);
+      }
+      .types strong {
         font-size: 13px;
         font-weight: 600;
+        line-height: 1.2;
       }
-      .types button span {
+      .types span {
         font-size: 11px;
         color: var(--text-2);
+        line-height: 1.2;
       }
       .types button[aria-pressed='true'] {
         color: #fff;
         background: var(--accent);
-        box-shadow: none;
+        box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.25);
       }
       .types button[aria-pressed='true'] span {
-        color: rgba(255, 255, 255, 0.82);
+        color: rgba(255, 255, 255, 0.78);
       }
-      .types button:focus-visible,
-      .tools button:focus-visible {
-        outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
-        outline-offset: 2px;
+      .types button[aria-pressed='true'] .dot {
+        box-shadow:
+          0 0 0 2px #fff,
+          inset 0 -5px 8px rgba(0, 0, 0, 0.18);
       }
+      .types button:focus-visible {
+        outline: none;
+        box-shadow: var(--focus);
+      }
+
       .strength {
-        padding: 10px 14px 6px;
-      }
-      .strength div {
+        padding: 10px 10px 8px;
         display: flex;
-        justify-content: space-between;
-        font-size: 13px;
+        flex-direction: column;
+        gap: 6px;
       }
-      .strength output {
-        color: var(--text-2);
-        font-variant-numeric: tabular-nums;
-      }
-      .tools button {
+      .strength .scale {
         display: flex;
-        align-items: center;
+        align-items: baseline;
         justify-content: space-between;
-        width: 100%;
-        border: 0;
-        padding: 10px 14px;
-        font: inherit;
-        color: var(--text);
-        background: transparent;
-        border-bottom: 0.5px solid var(--line);
-        cursor: pointer;
-      }
-      .tools button:last-child {
-        border-bottom: 0;
-      }
-      .tools button:hover {
-        background: var(--fill);
-      }
-      .tools kbd {
-        font: inherit;
         font-size: 11px;
         color: var(--text-2);
       }
-      .tools button[aria-pressed='true'] kbd {
+      .strength output {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tools .row kbd {
+        white-space: nowrap;
+      }
+      .tools .row[aria-pressed='true'] kbd {
         color: var(--green);
         font-weight: 600;
       }
+
       #status {
-        min-height: 16px;
-        margin: 0 4px;
+        min-height: 15px;
+        margin: -4px 2px 0;
         font-size: 11px;
+        line-height: 1.35;
         color: var(--text-2);
+      }
+      #status:empty {
+        display: none;
       }
       #status.error {
         color: var(--red);
@@ -150,12 +192,15 @@
         font: inherit;
         color: var(--accent);
         background: none;
-        cursor: pointer;
+        cursor: default;
       }
+
       footer {
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        margin: 0 4px;
+        padding: 10px 2px 0;
+        border-top: 0.5px solid var(--line);
         font-size: 11px;
         color: var(--text-2);
       }
@@ -163,9 +208,15 @@
         border: 0;
         padding: 0;
         font: inherit;
+        font-size: 12px;
         color: var(--accent);
         background: none;
-        cursor: pointer;
+        cursor: default;
+      }
+      footer button:focus-visible {
+        outline: none;
+        box-shadow: var(--focus);
+        border-radius: 4px;
       }
     </style>
   </head>
@@ -186,36 +237,87 @@
       <section>
         <p class="label">Vision type</p>
         <div class="types" id="types">
-          <button data-type="protan"><strong>Protan</strong><span>Red-weak</span></button>
-          <button data-type="deutan"><strong>Deutan</strong><span>Green-weak</span></button>
-          <button data-type="tritan"><strong>Tritan</strong><span>Blue-yellow</span></button>
-          <button data-type="achroma"><strong>Monochrome</strong><span>No color vision</span></button>
+          <button data-type="protan"><i class="dot protan"></i><strong>Protan</strong><span>Red-weak</span></button>
+          <button data-type="deutan"><i class="dot deutan"></i><strong>Deutan</strong><span>Green-weak</span></button>
+          <button data-type="tritan"><i class="dot tritan"></i><strong>Tritan</strong><span>Blue-yellow</span></button>
+          <button data-type="achroma">
+            <i class="dot achroma"></i><strong>Monochrome</strong><span>No color vision</span>
+          </button>
         </div>
       </section>
 
       <section>
-        <p class="label">Strength</p>
+        <p class="label">Color blindness strength</p>
         <div class="card strength">
-          <div><span>How strong the color blindness is</span><output id="severity-value">80%</output></div>
-          <input id="severity" type="range" min="0" max="100" step="1" aria-label="Strength" />
+          <input id="severity" class="cc" type="range" min="0" max="100" step="1" aria-label="Color blindness strength" />
+          <div class="scale">
+            <span>Mild</span>
+            <output id="severity-value">80%</output>
+            <span>Strong</span>
+          </div>
         </div>
       </section>
 
       <section>
         <p class="label">Boost</p>
         <div class="card strength">
-          <div><span>How far Photon pushes colors apart</span><output id="boost-value">2×</output></div>
-          <input id="boost" type="range" min="1" max="3" step="0.1" aria-label="Boost" />
+          <input id="boost" class="cc" type="range" min="1" max="3" step="0.1" aria-label="Boost: how far Photon pushes colors apart" />
+          <div class="scale">
+            <span>Standard</span>
+            <output id="boost-value">2×</output>
+            <span>Strongest</span>
+          </div>
         </div>
       </section>
 
       <section>
         <p class="label">Tools</p>
-        <div class="card tools">
-          <button data-action="test">Take the vision test <kbd>1 minute</kbd></button>
-          <button data-action="simulator" id="simulator">Judge view <kbd data-key="S"></kbd></button>
-          <button data-action="names" id="names">Color names <kbd data-key="C"></kbd></button>
-          <button data-action="conflicts" id="conflicts">Find conflicts <kbd data-key="F"></kbd></button>
+        <div class="card list tools">
+          <button class="row" data-action="test">
+            <span class="icon-badge" style="--badge: var(--green)">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" />
+                <circle cx="8" cy="8" r="2.1" />
+              </svg>
+            </span>
+            <span class="row-text">Take the vision test</span>
+            <kbd>1 minute</kbd>
+            <span class="chevron">›</span>
+          </button>
+          <button class="row" data-action="simulator" id="simulator">
+            <span class="icon-badge" style="--badge: var(--blue)">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3.5" width="12" height="9" rx="2" />
+                <path d="M8 3.5v9" />
+              </svg>
+            </span>
+            <span class="row-text">Judge view</span>
+            <kbd data-key="S"></kbd>
+            <span class="chevron">›</span>
+          </button>
+          <button class="row" data-action="names" id="names">
+            <span class="icon-badge" style="--badge: var(--orange)">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.6 2.6l2.8 2.8-6.6 6.6-3.4.6.6-3.4z" />
+                <path d="M9.2 4l2.8 2.8" />
+              </svg>
+            </span>
+            <span class="row-text">Color names</span>
+            <kbd data-key="C"></kbd>
+            <span class="chevron">›</span>
+          </button>
+          <button class="row" data-action="conflicts" id="conflicts">
+            <span class="icon-badge" style="--badge: var(--red)">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 2.6l6 10.4H2z" />
+                <path d="M8 6.6v3" />
+                <circle cx="8" cy="11.4" r="0.5" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="row-text">Find conflicts</span>
+            <kbd data-key="F"></kbd>
+            <span class="chevron">›</span>
+          </button>
         </div>
       </section>
 

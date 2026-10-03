@@ -1,13 +1,17 @@
-import { photon, inBrowser, showBrowserBanner } from '../shared/api.js'
+import { photon, inBrowser, markPlatform, showBrowserBanner } from '../shared/api.js'
 
 const $ = (id) => document.getElementById(id)
 const mod = photon.platform === 'darwin' ? '⌘⌥' : 'Ctrl+Alt+'
 
-if (inBrowser) {
-  document.documentElement.classList.add('in-browser')
-  $('quit').parentElement.hidden = true
-}
+markPlatform()
+if (inBrowser) $('quit').parentElement.hidden = true
 showBrowserBanner()
+
+// Size the window to the content.
+if (!inBrowser) {
+  const panel = document.querySelector('.panel')
+  new ResizeObserver(() => photon.fit(panel.getBoundingClientRect().height)).observe(panel)
+}
 
 for (const kbd of document.querySelectorAll('kbd[data-key]')) kbd.textContent = mod + kbd.dataset.key
 $('hint').textContent = `${mod}P turns correction on and off`
