@@ -27,6 +27,7 @@ import {
   createNamesLabel,
   createConflicts,
   createTest,
+  PANEL_WIDTH,
 } from './windows.js'
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -43,6 +44,7 @@ let names = null
 let conflicts = null
 let quitting = false
 let panelHiddenAt = 0
+let panelHeight = 0
 
 // Windows that need true colors on screen (judge view, vision test) pause
 // correction while they are open.
@@ -296,11 +298,17 @@ function registerIpc() {
   ipcMain.handle('window:minimize', (event) => BrowserWindow.fromWebContents(event.sender)?.minimize())
   // The panel asks for the height its content needs, so it never clips or
   // leaves empty space whatever the platform's fonts do.
+  // Only the height follows the content. The width is pinned, and nothing
+  // happens when the height is already right: on Windows the size read back
+  // from a window can differ by a pixel or two from the size that was set,
+  // and resizing on every report would grow the panel without end.
   ipcMain.handle('window:fit', (event, height) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win !== panel || !Number.isFinite(height)) return
-    const [width] = panel.getSize()
-    panel.setSize(width, Math.max(200, Math.round(height)))
+    const next = Math.max(200, Math.ceil(height))
+    if (next === panelHeight) return
+    panelHeight = next
+    panel.setContentSize(PANEL_WIDTH, next)
     placePanel(panel, tray?.getBounds())
   })
   ipcMain.handle('app:quit', () => app.quit())

@@ -35,9 +35,11 @@ export function loadPage(win, page) {
 
 const webPreferences = { preload }
 
+export const PANEL_WIDTH = 340
+
 export function createPanel() {
   const win = new BrowserWindow({
-    width: 340,
+    width: PANEL_WIDTH,
     height: 592,
     show: false,
     frame: false,
