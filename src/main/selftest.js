@@ -7,8 +7,8 @@ import { BrowserWindow, app } from 'electron'
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function meanDifference(a, b) {
-  const one = a.toBitmap()
-  const two = b.toBitmap()
+  const one = a.bitmap
+  const two = b.bitmap
   if (one.length !== two.length) return Infinity
   let sum = 0
   let n = 0
@@ -50,12 +50,17 @@ export async function runSelfTest({ backend, capture, getState, updateSettings, 
     await sleep(500)
     updateSettings({ enabled: false })
     await sleep(400)
-    const plain = (await capture.raw()).image
+    let timer = Date.now()
+    const plain = await capture.raw()
+    const firstCapture = Date.now() - timer
+    timer = Date.now()
+    await capture.raw()
+    console.log(`      (screen capture takes ${firstCapture} ms the first time, ${Date.now() - timer} ms after that)`)
     updateSettings({ enabled: true, type: 'deutan', severity: 1 })
     await sleep(600)
     check('correction is active', isCorrecting())
     if (backend.capturesIncludeEffect) {
-      const corrected = (await capture.raw()).image
+      const corrected = await capture.raw()
       const change = meanDifference(plain, corrected)
       check('the screen is recolored', change > 2, `mean change ${change.toFixed(2)} per channel`)
     } else {
@@ -63,7 +68,7 @@ export async function runSelfTest({ backend, capture, getState, updateSettings, 
       const frames = await read('overlay', "document.getElementById('screen').width")
       check('the overlay is drawing the screen', frames > 300, `frame width ${frames}`)
     }
-    const lifted = (await capture.snapshot()).image
+    const lifted = await capture.snapshot()
     const drift = meanDifference(plain, lifted)
     check('snapshots hold true colors while correcting', drift < 3, `differs from uncorrected by ${drift.toFixed(2)}`)
     await sleep(300)
@@ -80,10 +85,18 @@ export async function runSelfTest({ backend, capture, getState, updateSettings, 
     check('correction resumes after judge view', isCorrecting())
 
     // Color names.
+    // The label appears once the cursor has rested for three seconds, so
+    // this check needs the mouse left alone.
     await run('names')
     await sleep(1500)
+    check('color names stays hidden at first', findWindow('names')?.isVisible() === false)
+    // Three seconds of rest plus the time one screen capture takes.
+    const waitStart = Date.now()
+    while (Date.now() - waitStart < 9000 && findWindow('names')?.isVisible() !== true) await sleep(200)
     const name = await read('names', "document.getElementById('name').textContent")
-    check('color names label shows a color', Boolean(name) && name !== 'Move the pointer', name ?? 'no window')
+    const shown = findWindow('names')?.isVisible() === true
+    if (shown) console.log(`      (label appeared ${((Date.now() - waitStart + 1500) / 1000).toFixed(1)} s after the mode was turned on)`)
+    check('color names appears after the cursor rests', shown && Boolean(name), shown ? name : 'label not shown; was the mouse moved?')
     await run('names')
     await sleep(300)
     check('color names turns off', !getState().status.namesOn)
@@ -101,7 +114,7 @@ export async function runSelfTest({ backend, capture, getState, updateSettings, 
     await run('test')
     await sleep(1500)
     const plates = await read('test', "document.getElementById('start').click(); document.getElementById('progress').textContent")
-    check('vision test shows plates', plates === 'Plate 1 of 10', plates ?? 'no window')
+    check('vision test shows plates', String(plates).startsWith('Plate 1 of'), plates ?? 'no window')
     check('correction pauses during the vision test', !isCorrecting())
     findWindow('test')?.close()
     await sleep(500)

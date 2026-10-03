@@ -174,23 +174,26 @@ Known risks, which is why this is time-boxed:
   correction; every other feature still works there.
 - The capture adds a frame or two of delay.
 
-### Capture (`src/capture.js`)
+### Capture (`src/main/capture.js`)
 
-- `snapshot() -> image` of the primary display at native resolution, using
-  Electron's `desktopCapturer`. Snapshots must hold true colors, not
-  corrected ones.
-- `pixelAt(x, y) -> rgb`, read from the most recent snapshot.
+- `snapshot()` returns the primary display at native resolution as a BGRA
+  bitmap. Snapshots must hold true colors, not corrected ones.
+- `pixelAt(cursor)` returns the true color under a cursor position.
+
+On Windows both go through GDI (`src/main/gdi.js`), which reads the whole
+screen in about 50 ms and one pixel in under 10 ms. Electron's
+`desktopCapturer` took about two seconds on the build machine, so it is
+used only where GDI is unavailable (macOS).
 
 Whether a capture includes the correction depends on the backend, and each
 backend declares it as `capturesIncludeEffect`. This was measured on Windows
 rather than probed at every launch, because probing would flash the screen.
 
-- Windows magnifier: captures include the correction. `snapshot()` calls
-  `backend.clear()`, waits 100 ms, captures, and reapplies. This causes a
-  brief flicker, so the color names mode does not refresh on a timer while
-  correction is on (see below).
-- Overlay: the overlay window is excluded from capture, so `snapshot()`
-  captures directly.
+- Windows magnifier: captures include the correction. A read calls
+  `backend.clear()`, waits 40 ms, reads, and reapplies. A read sees the
+  lifted effect within about 10 ms, so the screen shows true colors for
+  roughly 50 to 100 ms.
+- Overlay: the overlay window is excluded from capture, so reads are direct.
 
 ### Settings (`src/settings.js`)
 
@@ -253,34 +256,60 @@ Purpose: let a person with normal vision see the benefit.
 ### Color names
 
 - The shortcut toggles the mode on and off.
-- While on, a small rounded label follows the cursor showing a swatch, the
-  name, and the hex code.
-- The cursor position is polled about 15 times a second. The color is read
-  from a snapshot taken when the mode starts, so the label reports the true
-  color, not the corrected one.
-- The snapshot is refreshed every second when captures are unaffected by
-  the correction. Otherwise it is refreshed only when the mode is switched
-  off and on again, to avoid flicker.
+- While the mode is on, nothing is shown as long as the cursor is moving.
+  When the cursor has rested within 3 pixels of one spot for 3 seconds, a
+  small rounded label appears beside it showing a swatch, the color's name,
+  and its hex code. Moving the cursor hides the label again.
+- The color is read from the screen at the moment the label appears, so it
+  names what is on screen now. It is the true color, not the corrected one.
+- With correction on, that read lifts correction for a moment, which shows
+  as one brief flicker each time a name appears.
 
 ### Vision test
 
-- Ten plates drawn on a canvas: a field of dots of varying size, with a
-  single digit formed by dots of a different color.
-- One control plate that everyone can read, then three plates for each of
-  the protan, deutan and tritan confusion axes, with decreasing color
-  difference. Dot brightness is randomized so the digit cannot be found by
-  brightness alone.
-- For each plate the person types the digit they see or presses "Nothing".
-- Correction is paused for the duration of the test.
-- Result: the axis with the most misses sets the type. A tie is broken in
-  the order deutan, protan, tritan, which is most to least common. One, two
-  or three misses on that axis set severity to 0.4, 0.7 or 1.0. No misses reports "No color vision
-  deficiency detected" and changes nothing. A miss on the control plate
-  reports that the test could not be scored.
+The test measures, for each of the three cone types, the smallest color
+difference the person can see, and sets Photon from the result.
+
+- **Plates.** A circle of small dots with a single digit formed by dots of
+  a second color. The two colors of a plate differ in the response of
+  exactly one cone type (L for protan, M for deutan, S for tritan) and are
+  identical for the other two, computed in linear light from the sRGB to
+  cone-response matrix of Vienot, Brettel and Mollon (1999). A person
+  missing that cone cannot see the digit however large the difference; a
+  person in whom it is weak needs a larger difference than normal.
+- **Why this needs little calibration.** The colors come from cone
+  responses, not from a palette chosen by eye. Each plate is centered on
+  the same mid-gray. Dot brightness varies by about 16% either way, which
+  hides the small brightness errors an uncalibrated screen adds. The digit
+  changes on every plate, so it cannot be memorized, and guessing succeeds
+  one time in ten.
+- **Difficulty ladder.** Six levels per axis, defined by the difference a
+  person with normal vision sees between digit and background: deltaE of
+  56, 40, 28, 20, 14 and 10. The same ladder on all three axes makes the
+  three results comparable.
+- **Procedure.** One control plate that anyone can read by brightness, then
+  seven plates per axis, interleaved, 22 in all. Each axis runs a
+  staircase starting at the second level: a right answer makes that axis
+  one level harder, a wrong answer one level easier. Each axis therefore
+  settles at the person's threshold.
+- **Scoring.** An axis's threshold is the average level over its last four
+  plates, from -1 (could not read the easiest) to 6 (read the hardest every
+  time). The axis with the lowest threshold sets the type, with ties broken
+  in the order deutan, protan, tritan, most to least common. A threshold of
+  4.5 or more is normal, which allows one slip. Below that, severity runs
+  linearly from 20% at 4.5 to 100% at -1, rounded to the nearest 5%.
+- A miss on the control plate ends the test and reports that it could not
+  be scored.
+- Correction is paused for the duration of the test. The intro asks the
+  person to turn off Night Light, True Tone or other blue-light filters and
+  to use at least half brightness.
 - The result screen has an Apply button and states that this is a screening
   aid and not a medical diagnosis.
 
-Achromatopsia is not detected by the test and is chosen by hand.
+Limits: the test assumes a screen close to sRGB, it has not been validated
+against clinical tests or tried by color blind people, and the mapping
+from threshold to severity is an estimate. Achromatopsia is not detected
+and is chosen by hand.
 
 ### Conflict finder
 

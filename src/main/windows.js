@@ -88,7 +88,7 @@ export function createSimulator() {
 
 export function createNamesLabel() {
   const win = new BrowserWindow({
-    width: 230,
+    width: 320,
     height: 56,
     show: false,
     frame: false,
@@ -101,7 +101,7 @@ export function createNamesLabel() {
   })
   win.setIgnoreMouseEvents(true)
   win.setAlwaysOnTop(true, 'screen-saver')
-  win.webContents.once('did-finish-load', () => win.showInactive())
+  // Stays hidden until the cursor rests; the main process shows it.
   loadPage(win, 'names')
   return win
 }

@@ -34,9 +34,14 @@ export function recolor(pixels, transforms) {
   return out
 }
 
-function toLinear(c) {
+// sRGB byte (0..255) to linear light (0..1), and back.
+export function srgbToLinear(c) {
   const v = c / 255
   return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+}
+
+export function linearToSrgb(v) {
+  return clampByte(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055))
 }
 
 function labF(t) {
@@ -44,9 +49,9 @@ function labF(t) {
 }
 
 export function rgbToLab([r, g, b]) {
-  const lr = toLinear(r)
-  const lg = toLinear(g)
-  const lb = toLinear(b)
+  const lr = srgbToLinear(r)
+  const lg = srgbToLinear(g)
+  const lb = srgbToLinear(b)
   // sRGB to XYZ (D65), normalized by the D65 white point.
   const x = labF((0.4124564 * lr + 0.3575761 * lg + 0.1804375 * lb) / 0.95047)
   const y = labF(0.2126729 * lr + 0.7151522 * lg + 0.072175 * lb)

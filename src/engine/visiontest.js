@@ -1,80 +1,155 @@
-// Vision test: plate colors and scoring. Each test plate hides a digit using
-// two colors that sit on one confusion line, the direction in color space
-// along which a given type of color blindness sees no difference.
+// Vision test: plate colors, the adaptive procedure, and scoring.
+//
+// Each plate hides a digit using two colors that differ in the response of
+// exactly one cone type (L, M or S) and are identical for the other two. A
+// person missing that cone cannot see the digit at any strength, and a
+// person in whom it is weak needs a bigger difference than normal. Because
+// the colors are built from cone responses in linear light, not picked by
+// eye, the test does not depend on a hand-tuned palette. Dots also vary in
+// brightness, which hides the small errors an uncalibrated screen adds.
 
-import { simulate } from './matrices.js'
+import { srgbToLinear, linearToSrgb, deltaE } from './color.js'
 
-// The direction d that the fully affected eye cannot see: |S d| is smallest.
-// Found by scanning the unit sphere, then scaled so its largest part is 1.
-function confusionDirection(type) {
-  const s = simulate(type, 1)
-  let best = null
-  let bestLength = Infinity
-  for (let theta = 0; theta < 180; theta += 0.5) {
-    for (let phi = 0; phi < 360; phi += 0.5) {
-      const t = (theta * Math.PI) / 180
-      const p = (phi * Math.PI) / 180
-      const d = [Math.sin(t) * Math.cos(p), Math.sin(t) * Math.sin(p), Math.cos(t)]
-      const length = Math.hypot(
-        s[0] * d[0] + s[1] * d[1] + s[2] * d[2],
-        s[3] * d[0] + s[4] * d[1] + s[5] * d[2],
-        s[6] * d[0] + s[7] * d[1] + s[8] * d[2],
-      )
-      if (length < bestLength) {
-        bestLength = length
-        best = d
-      }
-    }
-  }
-  const scale = Math.max(...best.map(Math.abs))
-  return best.map((v) => v / scale)
+export const AXES = ['protan', 'deutan', 'tritan']
+
+// Linear sRGB to cone responses (Vienot, Brettel & Mollon, 1999).
+const RGB_TO_LMS = [17.8824, 43.5161, 4.11935, 3.45565, 27.1554, 3.86714, 0.0299566, 0.184309, 1.46709]
+
+function invert(m) {
+  const [a, b, c, d, e, f, g, h, i] = m
+  const A = e * i - f * h
+  const B = -(d * i - f * g)
+  const C = d * h - e * g
+  const det = a * A + b * B + c * C
+  return [A, -(b * i - c * h), b * f - c * e, B, a * i - c * g, -(a * f - c * d), C, -(a * h - b * g), a * e - b * d].map(
+    (v) => v / det,
+  )
 }
 
-// How far apart figure and background sit along the confusion line, in RGB
-// units. A mild deficiency hides only the small step; a full one hides all.
-// The tritan model leaves a little residual difference, so its steps are smaller.
-const STEPS = { protan: [16, 30, 52], deutan: [16, 30, 52], tritan: [12, 22, 36] }
-const BASE = { protan: [150, 125, 95], deutan: [150, 125, 95], tritan: [120, 135, 150] }
-const DIGITS = { protan: [2, 5, 8], deutan: [3, 6, 9], tritan: [4, 7, 5] }
+const LMS_TO_RGB = invert(RGB_TO_LMS)
 
-function buildPlates() {
-  const plates = [{ id: 'control', axis: 'control', digit: 8, background: [214, 204, 190], figure: [52, 62, 84] }]
-  const byAxis = {}
-  for (const axis of ['protan', 'deutan', 'tritan']) {
-    const d = confusionDirection(axis)
-    byAxis[axis] = STEPS[axis].map((step, i) => ({
-      id: `${axis}-${i + 1}`,
-      axis,
-      digit: DIGITS[axis][i],
-      background: BASE[axis].map((v, c) => Math.round(v - step * d[c])),
-      figure: BASE[axis].map((v, c) => Math.round(v + step * d[c])),
-    }))
-  }
-  // Interleave the axes, easiest to see first.
-  for (let i = 2; i >= 0; i--) {
-    plates.push(byAxis.protan[i], byAxis.deutan[i], byAxis.tritan[i])
-  }
-  return plates
+export function rgbToLms(rgb) {
+  const [r, g, b] = rgb.map(srgbToLinear)
+  return [0, 1, 2].map((row) => RGB_TO_LMS[row * 3] * r + RGB_TO_LMS[row * 3 + 1] * g + RGB_TO_LMS[row * 3 + 2] * b)
 }
 
-export const PLATES = buildPlates()
+// Mid-gray in linear light: the color every plate is centered on.
+const BASE = 0.35
 
-const SEVERITY = { 1: 0.4, 2: 0.7, 3: 1 }
+// The change in linear RGB that moves one cone's response and no other.
+function isolatingDirection(axis) {
+  const cone = AXES.indexOf(axis)
+  return [LMS_TO_RGB[cone], LMS_TO_RGB[3 + cone], LMS_TO_RGB[6 + cone]]
+}
+
+function colorsAt(direction, amount) {
+  return {
+    figure: direction.map((d) => linearToSrgb(BASE + amount * d)),
+    background: direction.map((d) => linearToSrgb(BASE - amount * d)),
+  }
+}
+
+// Difficulty levels, easiest first, as the color difference a person with
+// normal vision sees between digit and background (CIE76 deltaE). Using the
+// same ladder on every axis makes the three thresholds comparable.
+export const LADDER = [56, 40, 28, 20, 14, 10]
+
+const cache = new Map()
+
+// The two colors of a plate. level indexes LADDER.
+export function plateColors(axis, level) {
+  const key = `${axis}:${level}`
+  if (cache.has(key)) return cache.get(key)
+  const direction = isolatingDirection(axis)
+  // The largest step that keeps both colors displayable.
+  let high = Math.min(...direction.map((d) => Math.min(BASE - 0.01, 0.99 - BASE) / Math.abs(d)))
+  let low = 0
+  // Find the step whose visible difference matches the ladder.
+  for (let i = 0; i < 40; i++) {
+    const mid = (low + high) / 2
+    const { figure, background } = colorsAt(direction, mid)
+    if (deltaE(figure, background) < LADDER[level]) low = mid
+    else high = mid
+  }
+  const colors = colorsAt(direction, high)
+  cache.set(key, colors)
+  return colors
+}
+
+// Brightness alone gives this one away, so everyone can read it.
+export const CONTROL = { figure: [52, 62, 84], background: [214, 204, 190] }
+
+export const TRIALS_PER_AXIS = 7
+export const TOTAL_PLATES = 1 + AXES.length * TRIALS_PER_AXIS
+const START_LEVEL = 1
+const HARDEST = LADDER.length - 1
+// A threshold at or beyond this is normal: it allows one slip near the end.
+const NORMAL = 4.5
 // Ties go to the more common type.
 const TIE_ORDER = ['deutan', 'protan', 'tritan']
 
-// answers maps plate id to what the person typed, or null for "nothing".
-export function scoreTest(answers) {
-  const given = answers && typeof answers === 'object' ? answers : {}
-  const misses = { protan: 0, deutan: 0, tritan: 0 }
-  for (const plate of PLATES) {
-    const answer = given[plate.id]
-    const correct = answer != null && String(answer).trim() === String(plate.digit)
-    if (correct) continue
-    if (plate.axis === 'control') return { status: 'invalid' }
-    misses[plate.axis]++
+// Turns the three thresholds into a result. A threshold runs from -1 (could
+// not read even the easiest plate) to 6 (read the hardest every time).
+export function scoreThresholds(thresholds) {
+  let type = TIE_ORDER[0]
+  for (const axis of TIE_ORDER) if (thresholds[axis] < thresholds[type]) type = axis
+  const threshold = thresholds[type]
+  if (!(threshold < NORMAL)) return { status: 'none' }
+  const severity = 1 - (0.8 * (threshold + 1)) / (NORMAL + 1)
+  return { status: 'ok', type, severity: Math.min(1, Math.max(0.2, Math.round(severity * 20) / 20)) }
+}
+
+// Runs the test: one control plate, then a staircase on each axis. A right
+// answer makes that axis harder, a wrong one easier, so each axis settles
+// at the smallest difference the person can see.
+export function createTest() {
+  const order = ['control']
+  for (let trial = 0; trial < TRIALS_PER_AXIS; trial++) order.push(...AXES)
+  const level = Object.fromEntries(AXES.map((axis) => [axis, START_LEVEL]))
+  const history = Object.fromEntries(AXES.map((axis) => [axis, []]))
+  let index = 0
+  let controlPassed = null
+
+  return {
+    total: TOTAL_PLATES,
+
+    get done() {
+      return controlPassed === false || index >= order.length
+    },
+
+    // The plate to show now, or null when the test is over.
+    next() {
+      if (this.done) return null
+      const axis = order[index]
+      if (axis === 'control') return { axis, number: 1, ...CONTROL }
+      const shown = Math.min(HARDEST, Math.max(0, level[axis]))
+      return { axis, level: shown, number: index + 1, ...plateColors(axis, shown) }
+    },
+
+    // Records whether the plate from next() was read correctly.
+    answer(correct) {
+      if (this.done) return
+      const axis = order[index]
+      index++
+      if (axis === 'control') {
+        controlPassed = correct === true
+        return
+      }
+      const shown = Math.min(HARDEST, Math.max(0, level[axis]))
+      level[axis] = shown + (correct === true ? 1 : -1)
+      history[axis].push(level[axis])
+    },
+
+    result() {
+      if (controlPassed !== true) return { status: 'invalid' }
+      if (!this.done) return { status: 'incomplete' }
+      const thresholds = {}
+      for (const axis of AXES) {
+        // The staircase has settled by the last four trials.
+        const settled = history[axis].slice(-4)
+        thresholds[axis] = settled.reduce((sum, v) => sum + v, 0) / settled.length
+      }
+      return { ...scoreThresholds(thresholds), thresholds }
+    },
   }
-  const type = TIE_ORDER.reduce((best, axis) => (misses[axis] > misses[best] ? axis : best), TIE_ORDER[0])
-  if (misses[type] === 0) return { status: 'none' }
-  return { status: 'ok', type, severity: SEVERITY[misses[type]] }
 }

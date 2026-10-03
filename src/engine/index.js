@@ -1,4 +1,14 @@
 export { TYPES, IDENTITY, simulate, correct, multiply, clampSeverity } from './matrices.js'
-export { applyMatrix, recolor, rgbToLab, rgbToHsl, deltaE, colorName, toHex } from './color.js'
-export { PLATES, scoreTest } from './visiontest.js'
+export { applyMatrix, recolor, srgbToLinear, linearToSrgb, rgbToLab, rgbToHsl, deltaE, colorName, toHex } from './color.js'
+export {
+  AXES,
+  LADDER,
+  CONTROL,
+  TOTAL_PLATES,
+  TRIALS_PER_AXIS,
+  plateColors,
+  rgbToLms,
+  createTest,
+  scoreThresholds,
+} from './visiontest.js'
 export { findConflicts, DISTINCT, CONFUSED, LOST } from './conflicts.js'

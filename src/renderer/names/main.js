@@ -17,7 +17,7 @@ photon.on('names:update', show)
 
 if (inBrowser) {
   document.documentElement.classList.add('in-browser')
-  showBrowserBanner('Sample image. In the desktop app the label follows your cursor over any app.')
+  showBrowserBanner('Sample image. Rest the pointer on a color for 3 seconds to see its name.')
 
   const sample = makeSample()
   const canvas = $('sample')
@@ -26,17 +26,28 @@ if (inBrowser) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   ctx.drawImage(sample, 0, 0)
 
-  window.addEventListener('pointermove', (event) => {
-    const label = $('label')
-    label.style.left = `${Math.min(event.clientX + 20, window.innerWidth - label.offsetWidth - 8)}px`
-    label.style.top = `${Math.min(event.clientY + 20, window.innerHeight - label.offsetHeight - 8)}px`
+  const label = $('label')
+  const DWELL_MS = 3000
+  let timer = null
+  label.hidden = true
 
+  function nameAt(clientX, clientY) {
     // Undo the letterboxing of object-fit: contain to find the image pixel.
     const scale = Math.min(window.innerWidth / canvas.width, window.innerHeight / canvas.height)
-    const x = Math.floor((event.clientX - (window.innerWidth - canvas.width * scale) / 2) / scale)
-    const y = Math.floor((event.clientY - (window.innerHeight - canvas.height * scale) / 2) / scale)
+    const x = Math.floor((clientX - (window.innerWidth - canvas.width * scale) / 2) / scale)
+    const y = Math.floor((clientY - (window.innerHeight - canvas.height * scale) / 2) / scale)
     if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return
     const rgb = [...ctx.getImageData(x, y, 1, 1).data.slice(0, 3)]
     show({ rgb, name: colorName(rgb), hex: toHex(rgb) })
+    label.hidden = false
+    label.style.left = `${Math.min(clientX + 20, window.innerWidth - label.offsetWidth - 8)}px`
+    label.style.top = `${Math.min(clientY + 20, window.innerHeight - label.offsetHeight - 8)}px`
+  }
+
+  // The label appears only after the pointer has rested, and hides on a move.
+  window.addEventListener('pointermove', (event) => {
+    label.hidden = true
+    clearTimeout(timer)
+    timer = setTimeout(() => nameAt(event.clientX, event.clientY), DWELL_MS)
   })
 }

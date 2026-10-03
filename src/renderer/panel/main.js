@@ -49,6 +49,8 @@ function renderStatus(settings, status) {
     }
   } else if (status.shortcutErrors.length) {
     el.textContent = `Another app is using ${status.shortcutErrors.join(', ')}, so that shortcut is unavailable.`
+  } else if (status.namesOn) {
+    el.textContent = 'Color names is on. Rest the pointer on a color for 3 seconds to see its name.'
   } else if (settings.type === 'achroma') {
     el.textContent = 'Color cannot be restored for monochrome vision. Photon raises contrast instead; Color names tells you what a color is.'
   }

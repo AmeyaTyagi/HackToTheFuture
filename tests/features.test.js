@@ -1,8 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  PLATES,
-  scoreTest,
+  plateColors,
   findConflicts,
   simulate,
   correct,
@@ -12,95 +11,6 @@ import {
 } from '../src/engine/index.js'
 
 const ZERO = [0, 0, 0]
-
-function answersWithMisses(missed) {
-  const answers = {}
-  for (const plate of PLATES) answers[plate.id] = missed.includes(plate.id) ? null : String(plate.digit)
-  return answers
-}
-
-// ---- Vision test ----------------------------------------------------------
-
-test('there are ten plates: one control and three per axis', () => {
-  assert.equal(PLATES.length, 10)
-  assert.equal(PLATES[0].axis, 'control')
-  for (const axis of ['protan', 'deutan', 'tritan']) {
-    assert.equal(PLATES.filter((plate) => plate.axis === axis).length, 3)
-  }
-  assert.equal(new Set(PLATES.map((plate) => plate.id)).size, 10)
-})
-
-test('plate colors are valid screen colors', () => {
-  for (const plate of PLATES) {
-    for (const v of [...plate.figure, ...plate.background]) {
-      assert.ok(Number.isInteger(v) && v >= 0 && v <= 255, `${plate.id}: ${v}`)
-    }
-  }
-})
-
-test('each plate is visible to normal vision and hidden from its own axis', () => {
-  for (const plate of PLATES.filter((p) => p.axis !== 'control')) {
-    const normal = deltaE(plate.figure, plate.background)
-    const s = simulate(plate.axis, 1)
-    const hidden = deltaE(applyMatrix(s, ZERO, plate.figure), applyMatrix(s, ZERO, plate.background))
-    assert.ok(normal > 10, `${plate.id} normal ${normal}`)
-    assert.ok(hidden < 12, `${plate.id} hidden ${hidden}`)
-    assert.ok(hidden < normal / 4, `${plate.id} ratio`)
-  }
-})
-
-test('the control plate is visible to every type', () => {
-  const control = PLATES[0]
-  for (const type of ['protan', 'deutan', 'tritan', 'achroma']) {
-    const s = simulate(type, 1)
-    const seen = deltaE(applyMatrix(s, ZERO, control.figure), applyMatrix(s, ZERO, control.background))
-    assert.ok(seen > 40, `${type}: ${seen}`)
-  }
-})
-
-test('all correct answers report no deficiency', () => {
-  assert.deepEqual(scoreTest(answersWithMisses([])), { status: 'none' })
-})
-
-test('a wrong control answer cannot be scored', () => {
-  assert.deepEqual(scoreTest(answersWithMisses(['control'])), { status: 'invalid' })
-})
-
-test('misses set type and severity', () => {
-  assert.deepEqual(scoreTest(answersWithMisses(['deutan-1', 'deutan-2'])), {
-    status: 'ok',
-    type: 'deutan',
-    severity: 0.7,
-  })
-  assert.deepEqual(scoreTest(answersWithMisses(['tritan-1', 'tritan-2', 'tritan-3'])), {
-    status: 'ok',
-    type: 'tritan',
-    severity: 1,
-  })
-  assert.deepEqual(scoreTest(answersWithMisses(['protan-1'])), { status: 'ok', type: 'protan', severity: 0.4 })
-})
-
-test('ties go to deutan, then protan', () => {
-  assert.equal(scoreTest(answersWithMisses(['protan-1', 'deutan-1'])).type, 'deutan')
-  assert.equal(scoreTest(answersWithMisses(['protan-1', 'tritan-1'])).type, 'protan')
-})
-
-test('empty, non-digit and missing answers count as misses, never as errors', () => {
-  const answers = answersWithMisses([])
-  answers['deutan-1'] = ''
-  answers['deutan-2'] = 'x'
-  delete answers['deutan-3']
-  assert.deepEqual(scoreTest(answers), { status: 'ok', type: 'deutan', severity: 1 })
-  assert.deepEqual(scoreTest(null), { status: 'invalid' })
-  assert.deepEqual(scoreTest(undefined), { status: 'invalid' })
-})
-
-test('answers with surrounding spaces or as numbers are accepted', () => {
-  const answers = answersWithMisses([])
-  answers.control = ' 8 '
-  answers['deutan-1'] = PLATES.find((p) => p.id === 'deutan-1').digit
-  assert.deepEqual(scoreTest(answers), { status: 'none' })
-})
 
 // ---- Conflict finder ------------------------------------------------------
 
@@ -115,8 +25,8 @@ function image(width, height, colorAt) {
   return pixels
 }
 
-// A pair a deuteranope confuses, taken from a test plate.
-const plate = PLATES.find((p) => p.id === 'deutan-3')
+// A pair a deuteranope confuses, taken from the easiest deutan test plate.
+const plate = plateColors('deutan', 0)
 
 test('finds the conflict in a two-color image the user cannot tell apart', () => {
   const pixels = image(40, 20, (x) => (x < 20 ? plate.figure : plate.background))

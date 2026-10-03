@@ -15,7 +15,7 @@ import { join } from 'node:path'
 import { correct, colorName, toHex } from '../engine/index.js'
 import { createBackend } from './backends/index.js'
 import { createCapture } from './capture.js'
-import { toImagePoint, pixelFromBitmap } from './geometry.js'
+import { createDwell } from './geometry.js'
 import { load, save, sanitize } from './settings.js'
 import { registerShortcuts } from './shortcuts.js'
 import {
@@ -42,6 +42,7 @@ let lastSnapshot = null
 let names = null
 let conflicts = null
 let quitting = false
+let panelHiddenAt = 0
 
 // Windows that need true colors on screen (judge view, vision test) pause
 // correction while they are open.
@@ -98,25 +99,37 @@ async function takeSnapshot() {
     panel.hide()
     await sleep(150)
   }
-  const { image, display } = await capture.snapshot()
-  const size = image.getSize()
-  return { image, display, size }
+  return capture.snapshot()
 }
 
-function rememberSnapshot({ image, size }) {
+function rememberSnapshot({ bitmap, size }) {
+  const image = nativeImage.createFromBitmap(bitmap, size)
   lastSnapshot = { dataUrl: image.toDataURL(), width: size.width, height: size.height }
 }
 
 // ---- Actions -------------------------------------------------------------
 
+function findPage(page) {
+  return BrowserWindow.getAllWindows().find((win) => !win.isDestroyed() && win.photonPage === page)
+}
+
+// The shortcut opens the judge view, and closes it if it is already open.
 async function openSimulator() {
+  const open = findPage('simulator')
+  if (open) return open.close()
   rememberSnapshot(await takeSnapshot())
-  pauseWhileOpen(createSimulator())
+  const win = createSimulator()
+  win.photonPage = 'simulator'
+  pauseWhileOpen(win)
 }
 
 function openTest() {
   panel?.hide()
-  pauseWhileOpen(createTest())
+  const open = findPage('test')
+  if (open) return open.focus()
+  const win = createTest()
+  win.photonPage = 'test'
+  pauseWhileOpen(win)
 }
 
 function stopNames() {
@@ -127,54 +140,47 @@ function stopNames() {
   broadcast()
 }
 
-async function toggleNames() {
+// Color names: while the mode is on, resting the cursor for DWELL_MS shows
+// the name of the color under it. Moving the cursor hides the label again.
+const DWELL_MS = 3000
+
+function toggleNames() {
   if (names) return stopNames()
-  const shot = await takeSnapshot()
-  const session = {
-    win: createNamesLabel(),
-    bitmap: shot.image.toBitmap(),
-    size: shot.size,
-    display: shot.display,
-    refreshedAt: Date.now(),
-    refreshing: false,
-    timer: null,
-  }
-  names = session
+  panel?.hide()
+  const live = { win: createNamesLabel(), dwell: createDwell(DWELL_MS), busy: false, timer: null }
+  names = live
 
-  async function refresh() {
-    session.refreshing = true
+  async function showName(restingAt) {
+    live.busy = true
     try {
-      const next = await capture.snapshot()
-      session.bitmap = next.image.toBitmap()
-      session.size = next.image.getSize()
-      session.display = next.display
-    } catch {
-      // Keep the previous snapshot.
+      // Read now, so the label names what is on screen at this moment.
+      const rgb = await capture.pixelAt(restingAt)
+      const cursor = screen.getCursorScreenPoint()
+      const moved = Math.hypot(cursor.x - restingAt.x, cursor.y - restingAt.y) > 3
+      if (!rgb || names !== live || live.win.isDestroyed() || moved) return
+      const { bounds } = screen.getDisplayNearestPoint(cursor)
+
+      // Sit below and right of the cursor, flipping at the screen edges.
+      const [w, h] = live.win.getSize()
+      const x = cursor.x + 20 + w > bounds.x + bounds.width ? cursor.x - 20 - w : cursor.x + 20
+      const y = cursor.y + 20 + h > bounds.y + bounds.height ? cursor.y - 20 - h : cursor.y + 20
+      live.win.setPosition(x, y)
+      live.win.webContents.send('names:update', { rgb, name: colorName(rgb), hex: toHex(rgb) })
+      live.win.showInactive()
+    } catch (error) {
+      console.error('Photon: could not read the color under the cursor:', error.message)
     } finally {
-      session.refreshedAt = Date.now()
-      session.refreshing = false
+      live.busy = false
     }
   }
 
-  session.timer = setInterval(() => {
-    if (session.win.isDestroyed()) return stopNames()
+  live.timer = setInterval(() => {
+    if (live.win.isDestroyed()) return stopNames()
     const cursor = screen.getCursorScreenPoint()
-    const { bounds, scaleFactor } = session.display
-    const point = toImagePoint(cursor, bounds, scaleFactor, session.size)
-    const rgb = pixelFromBitmap(session.bitmap, session.size.width, point)
-
-    // Sit below and right of the cursor, flipping at the screen edges.
-    const [w, h] = session.win.getSize()
-    const x = cursor.x + 20 + w > bounds.x + bounds.width ? cursor.x - 20 - w : cursor.x + 20
-    const y = cursor.y + 20 + h > bounds.y + bounds.height ? cursor.y - 20 - h : cursor.y + 20
-    session.win.setPosition(x, y)
-    session.win.webContents.send('names:update', { rgb, name: colorName(rgb), hex: toHex(rgb) })
-
-    // Refreshing would flicker when correction has to be lifted to capture.
-    if (!capture.wouldFlicker && !session.refreshing && Date.now() - session.refreshedAt > 1000) {
-      refresh()
-    }
-  }, 66)
+    const event = live.dwell.update(cursor, Date.now())
+    if (event === 'moved' && live.win.isVisible()) live.win.hide()
+    if (event === 'dwell' && !live.busy) showName(cursor)
+  }, 100)
   broadcast()
 }
 
@@ -255,8 +261,10 @@ function showPanel() {
 }
 
 function togglePanel() {
-  if (panel?.isVisible()) panel.hide()
-  else showPanel()
+  if (panel?.isVisible()) return panel.hide()
+  // Clicking the tray icon while the panel is open blurs it first, which
+  // hides it; that same click must not open it again.
+  if (Date.now() - panelHiddenAt > 300) showPanel()
 }
 
 function createTray() {
@@ -306,7 +314,7 @@ async function start() {
   } catch (error) {
     status.backendError = error.message
   }
-  capture = createCapture({ backend, isCorrecting, reapply: applyCorrection })
+  capture = await createCapture({ backend, isCorrecting, reapply: applyCorrection })
 
   registerIpc()
   status.shortcutErrors = registerShortcuts({
@@ -320,6 +328,9 @@ async function start() {
   panel = createPanel()
   panel.on('blur', () => {
     if (!panel.webContents.isDevToolsOpened()) panel.hide()
+  })
+  panel.on('hide', () => {
+    panelHiddenAt = Date.now()
   })
   panel.on('close', (event) => {
     if (quitting) return
