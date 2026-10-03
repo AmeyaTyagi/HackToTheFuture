@@ -34,8 +34,12 @@ Photon lives in the system tray. Click its ring icon to open the panel.
 |---|---|
 | Ctrl+Alt+P / Cmd+Option+P | Turn correction on or off |
 | Ctrl+Alt+S / Cmd+Option+S | Judge view: before and after, with a draggable divider |
-| Ctrl+Alt+C / Cmd+Option+C | Color names: rest the cursor on a color for 3 seconds to see its name |
+| Ctrl+Alt+C / Cmd+Option+C | Color names: rest the cursor on a color for 2 seconds to see its name |
 | Ctrl+Alt+F / Cmd+Option+F | Find colors on screen that look alike to you |
+
+The panel has two sliders. Strength is how strong the person's color
+blindness is; the vision test sets it. Boost is how far Photon pushes
+confusable colors apart, from 1x to 3x.
 
 If the screen ever becomes hard to read, the first shortcut switches
 correction off. Quitting Photon always restores the screen.
@@ -73,6 +77,7 @@ correction is affected.
   for it, and Color names says what a color is.
 - The vision test is a screening aid, not a diagnosis. It assumes a screen
   close to sRGB with blue-light filters off.
-- Color names lifts correction for a moment to read the true color, so
-  the screen flickers once each time a name appears while correction is on.
+- Color names reads the true color from the window under the cursor, with
+  no flicker. For the rare window that cannot be read that way, correction
+  is lifted for a moment, which shows as one brief flicker.
 - On macOS, correction covers the main display only.

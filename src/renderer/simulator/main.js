@@ -2,7 +2,8 @@
 // Left of the divider: what the chosen color vision sees without Photon.
 // Right of it: what the same person sees with Photon on.
 
-import { photon, showBrowserBanner, loadImage } from '../shared/api.js'
+import { photon, inBrowser, showBrowserBanner, loadImage } from '../shared/api.js'
+import { makeSample } from '../shared/sample.js'
 import { simulate, correct, recolor } from '../../engine/index.js'
 
 const $ = (id) => document.getElementById(id)
@@ -15,6 +16,9 @@ const TYPE_NAMES = { protan: 'protan', deutan: 'deutan', tritan: 'tritan', achro
 let source = null // ImageData of the true-color snapshot
 let type = 'deutan'
 let severity = 0.8
+let boost = 2
+let screenImage = null // the snapshot of the real screen, if there is one
+let sourceName = 'screen'
 let leftMode = 'without'
 let position = 0.5
 
@@ -25,7 +29,7 @@ function put(canvas, pixels) {
 function draw() {
   if (!source) return
   const seen = { matrix: simulate(type, severity) }
-  put(right, recolor(source.data, [correct(type, severity), seen]))
+  put(right, recolor(source.data, [correct(type, severity, boost), seen]))
   put(left, leftMode === 'normal' ? new Uint8ClampedArray(source.data) : recolor(source.data, [seen]))
 
   const percent = Math.round(severity * 100)
@@ -37,6 +41,26 @@ function draw() {
   for (const button of $('left-mode').children) {
     button.setAttribute('aria-pressed', String(button.dataset.mode === leftMode))
   }
+  for (const button of $('source').children) {
+    button.setAttribute('aria-pressed', String(button.dataset.source === sourceName))
+  }
+  $('boost').value = boost
+  $('boost').style.setProperty('--fill-pct', `${((boost - 1) / 2) * 100}%`)
+  $('boost-value').textContent = `${boost.toFixed(1)}×`
+}
+
+// Loads a picture (an image or a canvas) as the thing being compared.
+function setSource(picture) {
+  const width = picture.naturalWidth ?? picture.width
+  const height = picture.naturalHeight ?? picture.height
+  for (const canvas of [left, right]) {
+    canvas.width = width
+    canvas.height = height
+  }
+  const ctx = right.getContext('2d', { willReadFrequently: true })
+  ctx.drawImage(picture, 0, 0)
+  source = ctx.getImageData(0, 0, width, height)
+  draw()
 }
 
 function setPosition(next) {
@@ -56,6 +80,8 @@ divider.addEventListener('pointermove', (event) => {
 
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') photon.close()
+  // Arrow keys on the Boost slider belong to the slider.
+  if (event.target === $('boost')) return
   if (event.key === 'ArrowLeft') setPosition(position - 0.02)
   if (event.key === 'ArrowRight') setPosition(position + 0.02)
 })
@@ -74,6 +100,21 @@ $('left-mode').addEventListener('click', (event) => {
   draw()
 })
 
+$('source').addEventListener('click', (event) => {
+  const button = event.target.closest('button')
+  if (!button) return
+  sourceName = button.dataset.source
+  // The demo image is packed with the color pairs people most often confuse.
+  setSource(sourceName === 'demo' || !screenImage ? makeSample() : screenImage)
+})
+
+// Boost here is saved, so the real screen correction matches what was shown.
+$('boost').addEventListener('input', (event) => {
+  boost = Number(event.target.value)
+  draw()
+  photon.setSettings({ boost })
+})
+
 $('close').addEventListener('click', () => photon.close())
 
 async function start() {
@@ -84,18 +125,19 @@ async function start() {
   // A strength of zero would show no difference at all.
   severity = settings.severity > 0 ? settings.severity : 1
 
-  const image = await loadImage(snapshot.dataUrl)
-  for (const canvas of [left, right]) {
-    canvas.width = image.naturalWidth
-    canvas.height = image.naturalHeight
+  boost = settings.boost ?? 2
+
+  if (inBrowser) {
+    // A browser has no real screen to show, only the demo image.
+    sourceName = 'demo'
+    $('source').hidden = true
+  } else {
+    screenImage = await loadImage(snapshot.dataUrl)
   }
-  const ctx = right.getContext('2d', { willReadFrequently: true })
-  ctx.drawImage(image, 0, 0)
-  source = ctx.getImageData(0, 0, right.width, right.height)
 
   $('message').remove()
   setPosition(0.5)
-  draw()
+  setSource(screenImage ?? makeSample())
 }
 
 start().catch((error) => {

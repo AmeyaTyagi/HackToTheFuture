@@ -38,6 +38,17 @@ export function clampSeverity(severity) {
   return Math.min(1, Math.max(0, n))
 }
 
+// Boost is how hard the correction pushes confusable colors apart:
+// 1 is the standard amount, 3 the most.
+export const BOOST_MIN = 1
+export const BOOST_MAX = 3
+
+export function clampBoost(boost) {
+  const n = Number(boost)
+  if (!Number.isFinite(n)) return BOOST_MIN
+  return Math.min(BOOST_MAX, Math.max(BOOST_MIN, n))
+}
+
 function lerp(a, b, t) {
   return a.map((v, i) => v + (b[i] - v) * t)
 }
@@ -63,17 +74,18 @@ export function simulate(type, severity) {
 }
 
 // The transform Photon applies to the screen. Offset is in 0..1 units.
-export function correct(type, severity) {
+export function correct(type, severity, boost = 1) {
   const s = clampSeverity(severity)
+  const push = clampBoost(boost)
   if (type === 'achroma') {
     // Color cannot be restored, so stretch contrast around mid-gray instead.
-    const k = 1 + 0.5 * s
+    const k = 1 + 0.5 * s * (1 + (push - 1) / 2)
     const shift = 0.5 * (1 - k)
     return { matrix: IDENTITY.map((v) => v * k), offset: [shift, shift, shift] }
   }
   const shift = ERROR_SHIFT[type]
   if (!shift) return { matrix: [...IDENTITY], offset: [0, 0, 0] }
   const lost = simulate(type, s).map((v, i) => IDENTITY[i] - v)
-  const matrix = multiply(shift, lost).map((v, i) => v + IDENTITY[i])
+  const matrix = multiply(shift, lost).map((v, i) => v * push + IDENTITY[i])
   return { matrix, offset: [0, 0, 0] }
 }

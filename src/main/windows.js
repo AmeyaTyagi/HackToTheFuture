@@ -38,7 +38,7 @@ const webPreferences = { preload }
 export function createPanel() {
   const win = new BrowserWindow({
     width: 340,
-    height: 592,
+    height: 668,
     show: false,
     frame: false,
     resizable: false,
@@ -53,6 +53,7 @@ export function createPanel() {
       : { backgroundMaterial: 'acrylic' }),
     webPreferences,
   })
+  win.setAlwaysOnTop(true, 'screen-saver')
   loadPage(win, 'panel')
   return win
 }

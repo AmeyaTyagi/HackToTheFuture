@@ -24,6 +24,17 @@ export async function createGdiCapture() {
     biClrImportant: 'uint32',
   })
 
+  const POINT = koffi.struct('POINT', { x: 'int32', y: 'int32' })
+  const GetCursorPos = user32.func('bool __stdcall GetCursorPos(_Out_ POINT *point)')
+  const RECT = koffi.struct('RECT', { left: 'int32', top: 'int32', right: 'int32', bottom: 'int32' })
+  const WindowFromPoint = user32.func('void * __stdcall WindowFromPoint(POINT point)')
+  const GetAncestor = user32.func('void * __stdcall GetAncestor(void *hwnd, uint32 flags)')
+  const GetWindowRect = user32.func('bool __stdcall GetWindowRect(void *hwnd, _Out_ RECT *rect)')
+  const PrintWindow = user32.func('bool __stdcall PrintWindow(void *hwnd, void *hdc, uint32 flags)')
+  const GetPixel = gdi32.func('uint32 __stdcall GetPixel(void *hdc, int x, int y)')
+  const GA_ROOT = 2
+  const PW_RENDERFULLCONTENT = 2
+  const CLR_INVALID = 0xffffffff
   const GetDC = user32.func('void * __stdcall GetDC(void *hwnd)')
   const ReleaseDC = user32.func('int __stdcall ReleaseDC(void *hwnd, void *hdc)')
   const CreateCompatibleDC = gdi32.func('void * __stdcall CreateCompatibleDC(void *hdc)')
@@ -80,6 +91,44 @@ export async function createGdiCapture() {
 
   return {
     grab,
+    // Where the tip of the cursor is, in physical pixels, straight from
+    // Windows. Exact, where converting from logical pixels can be a pixel off.
+    cursor() {
+      const point = {}
+      return GetCursorPos(point) ? { x: point.x, y: point.y } : null
+    },
+
+    // The color at a screen point, taken from the window that is there
+    // rather than from the screen. The window draws its own picture, so the
+    // result is the true color even while the screen is being recolored, and
+    // nothing on screen changes. Returns null if the window will not draw.
+    windowPixel(x, y) {
+      const hit = WindowFromPoint({ x, y })
+      const root = hit && GetAncestor(hit, GA_ROOT)
+      if (!root) return null
+      const rect = {}
+      if (!GetWindowRect(root, rect)) return null
+      const width = rect.right - rect.left
+      const height = rect.bottom - rect.top
+      if (width <= 0 || height <= 0) return null
+      const screenDc = GetDC(null)
+      const memoryDc = CreateCompatibleDC(screenDc)
+      const bitmap = CreateCompatibleBitmap(screenDc, width, height)
+      const previous = SelectObject(memoryDc, bitmap)
+      try {
+        if (!PrintWindow(root, memoryDc, PW_RENDERFULLCONTENT)) return null
+        const color = GetPixel(memoryDc, x - rect.left, y - rect.top)
+        if (color === CLR_INVALID) return null
+        // COLORREF is 0x00BBGGRR.
+        return [color & 0xff, (color >> 8) & 0xff, (color >> 16) & 0xff]
+      } finally {
+        SelectObject(memoryDc, previous)
+        DeleteObject(bitmap)
+        DeleteDC(memoryDc)
+        ReleaseDC(null, screenDc)
+      }
+    },
+
     // One pixel as [r, g, b].
     pixel(x, y) {
       const buffer = grab(x, y, 1, 1)

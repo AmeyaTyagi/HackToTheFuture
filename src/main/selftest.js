@@ -2,7 +2,7 @@
 // PASS or FAIL for each. It recolors the screen for a few seconds, restores
 // the previous settings, and quits. Useful on a new machine or system.
 
-import { BrowserWindow, app } from 'electron'
+import { BrowserWindow, app, screen } from 'electron'
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -29,7 +29,16 @@ async function read(page, expression) {
   return win.webContents.executeJavaScript(expression)
 }
 
-export async function runSelfTest({ backend, capture, getState, updateSettings, run, isCorrecting }) {
+export async function runSelfTest({
+  backend,
+  capture,
+  getState,
+  updateSettings,
+  run,
+  isCorrecting,
+  getPanel,
+  takeSnapshot,
+}) {
   const results = []
   const check = (name, ok, detail = '') => {
     results.push(ok)
@@ -44,7 +53,15 @@ export async function runSelfTest({ backend, capture, getState, updateSettings, 
 
     // Correction. A red and green card guarantees there is color on screen
     // to change; a gray screen looks the same corrected or not.
-    const card = new BrowserWindow({ width: 480, height: 320, frame: false, alwaysOnTop: true, focusable: false })
+    const card = new BrowserWindow({
+      x: 100,
+      y: 100,
+      width: 480,
+      height: 320,
+      frame: false,
+      alwaysOnTop: true,
+      focusable: false,
+    })
     const cardPage = '<body style="margin:0;background:linear-gradient(90deg,rgb(220,40,40) 50%,rgb(40,160,60) 50%)">'
     await card.loadURL('data:text/html,' + encodeURIComponent(cardPage))
     await sleep(500)
@@ -73,7 +90,44 @@ export async function runSelfTest({ backend, capture, getState, updateSettings, 
     check('snapshots hold true colors while correcting', drift < 3, `differs from uncorrected by ${drift.toFixed(2)}`)
     await sleep(300)
     check('correction resumes after a snapshot', isCorrecting())
+
+    // Color reads. While the screen is recolored, the color under a point
+    // must come back exact, and without lifting correction (no flicker).
+    if (capture.pixelAtPhysical && backend.capturesIncludeEffect) {
+      const red = screen.dipToScreenPoint({ x: 200, y: 260 })
+      const green = screen.dipToScreenPoint({ x: 480, y: 260 })
+      const wrong = []
+      const liftsBefore = capture.lifts
+      for (const type of ['protan', 'deutan', 'tritan', 'achroma']) {
+        for (const boost of [1, 2, 3]) {
+          updateSettings({ enabled: true, type, severity: 1, boost })
+          await sleep(150)
+          const a = await capture.pixelAtPhysical(red)
+          const b = await capture.pixelAtPhysical(green)
+          if (String(a) !== '220,40,40') wrong.push(`${type} ${boost}x red read as ${a}`)
+          if (String(b) !== '40,160,60') wrong.push(`${type} ${boost}x green read as ${b}`)
+        }
+      }
+      check('colors are read exactly under every type and boost', wrong.length === 0, wrong.slice(0, 3).join('; '))
+      check('reading a color does not flicker the screen', capture.lifts === liftsBefore, `${capture.lifts - liftsBefore} flickers in 24 reads`)
+      updateSettings({ enabled: true, type: 'deutan', severity: 1, boost: before.boost })
+      await sleep(150)
+    }
     card.destroy()
+
+    // The panel stays open, and stays out of snapshots.
+    const panel = getPanel()
+    panel.show()
+    await sleep(400)
+    const withPanelOpen = await takeSnapshot()
+    check('the panel stays open while a snapshot is taken', panel.isVisible())
+    panel.hide()
+    await sleep(400)
+    const withPanelHidden = await capture.snapshot()
+    const leak = meanDifference(withPanelOpen, withPanelHidden)
+    check('the open panel is left out of snapshots', leak < 0.5, `differs from a snapshot without it by ${leak.toFixed(2)}`)
+    panel.show()
+    await sleep(300)
 
     // Judge view.
     await run('simulator')
@@ -85,18 +139,22 @@ export async function runSelfTest({ backend, capture, getState, updateSettings, 
     check('correction resumes after judge view', isCorrecting())
 
     // Color names.
-    // The label appears once the cursor has rested for three seconds, so
+    // The label appears once the cursor has rested for two seconds, so
     // this check needs the mouse left alone.
+    // The judge view took focus, which hides the panel; bring it back.
+    panel.show()
+    await sleep(300)
     await run('names')
     await sleep(1500)
     check('color names stays hidden at first', findWindow('names')?.isVisible() === false)
-    // Three seconds of rest plus the time one screen capture takes.
+    // Two seconds of rest plus the time one screen capture takes.
     const waitStart = Date.now()
     while (Date.now() - waitStart < 9000 && findWindow('names')?.isVisible() !== true) await sleep(200)
     const name = await read('names', "document.getElementById('name').textContent")
     const shown = findWindow('names')?.isVisible() === true
     if (shown) console.log(`      (label appeared ${((Date.now() - waitStart + 1500) / 1000).toFixed(1)} s after the mode was turned on)`)
     check('color names appears after the cursor rests', shown && Boolean(name), shown ? name : 'label not shown; was the mouse moved?')
+    check('the panel stays open while color names is on', panel.isVisible())
     await run('names')
     await sleep(300)
     check('color names turns off', !getState().status.namesOn)
@@ -104,6 +162,7 @@ export async function runSelfTest({ backend, capture, getState, updateSettings, 
     // Conflict finder.
     await run('conflicts')
     await sleep(3000)
+    check('the panel stays open while the conflict finder is on', panel.isVisible())
     const title = await read('conflicts', "document.getElementById('title').textContent")
     check('conflict finder scanned the screen', Boolean(title) && !title.startsWith('Scanning'), title ?? 'no window')
     await run('conflicts')
@@ -113,6 +172,7 @@ export async function runSelfTest({ backend, capture, getState, updateSettings, 
     // Vision test.
     await run('test')
     await sleep(1500)
+    check('the panel hides when another window is clicked or opened', !panel.isVisible())
     const plates = await read('test', "document.getElementById('start').click(); document.getElementById('progress').textContent")
     check('vision test shows plates', String(plates).startsWith('Plate 1 of'), plates ?? 'no window')
     check('correction pauses during the vision test', !isCorrecting())

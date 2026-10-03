@@ -85,15 +85,14 @@ export function rgbToHsl([r, g, b]) {
   return [h, s, l]
 }
 
-// Upper hue bound (degrees) for each name; red wraps around past 345.
+// Upper hue bound (degrees) for each family; red wraps around past 345.
 const HUES = [
   [15, 'red'],
   [45, 'orange'],
   [70, 'yellow'],
   [90, 'yellow-green'],
-  [160, 'green'],
-  [185, 'teal'],
-  [200, 'cyan'],
+  [165, 'green'],
+  [195, 'cyan'],
   [250, 'blue'],
   [290, 'purple'],
   [325, 'magenta'],
@@ -102,22 +101,39 @@ const HUES = [
 ]
 
 function shade(l) {
-  if (l < 0.13) return 'very dark '
-  if (l < 0.24) return 'dark '
+  if (l < 0.15) return 'very dark '
+  if (l < 0.32) return 'dark '
   if (l > 0.85) return 'pale '
-  if (l > 0.7) return 'light '
+  if (l > 0.68) return 'light '
   return ''
 }
 
+// Names a color the way a person would say it: a brightness word where it
+// helps, then the color family. Several families have everyday names for
+// their dark or light forms (brown, olive, pink, teal, tan), used here
+// because "dark orange" is not what anyone calls brown.
 export function colorName(rgb) {
   const [h, s, l] = rgbToHsl(rgb)
   if (l < 0.08) return 'black'
   if (l > 0.95) return 'white'
   if (s < 0.12) return l < 0.3 ? 'dark gray' : l > 0.7 ? 'light gray' : 'gray'
-  // Dark oranges read as brown.
-  if (h >= 15 && h < 45 && l < 0.42) return l < 0.2 ? 'dark brown' : 'brown'
-  const hue = HUES.find(([limit]) => h < limit)[1]
-  return shade(l) + hue
+
+  const family = HUES.find(([limit]) => h < limit)[1]
+
+  if (family === 'orange') {
+    if (l < 0.2) return 'dark brown'
+    if (l < 0.42) return 'brown'
+    // Washed-out light orange is tan or beige, not orange.
+    if (s < 0.6) return l > 0.8 ? 'beige' : 'tan'
+  }
+  // Light red is pink, and pink keeps its name across its light shades.
+  if (family === 'red' && l > 0.68) return l > 0.9 ? 'pale pink' : 'pink'
+  if (family === 'pink') return l < 0.32 ? 'dark pink' : l > 0.9 ? 'pale pink' : 'pink'
+  if ((family === 'yellow' || family === 'yellow-green') && l < 0.32) return l < 0.15 ? 'dark olive' : 'olive'
+  if (family === 'cyan' && l < 0.42) return l < 0.2 ? 'dark teal' : 'teal'
+  if (family === 'magenta' && l < 0.4) return l < 0.2 ? 'dark purple' : 'purple'
+
+  return shade(l) + family
 }
 
 export function toHex(rgb) {

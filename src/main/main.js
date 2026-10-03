@@ -56,14 +56,20 @@ function isCorrecting() {
 
 function applyCorrection() {
   if (!backendReady) return
-  if (isCorrecting()) backend.apply(correct(settings.type, settings.severity))
+  if (isCorrecting()) backend.apply(correct(settings.type, settings.severity, settings.boost))
   else backend.clear()
 }
 
 function currentState() {
   return {
     settings,
-    status: { ...status, backend: backend?.name ?? 'none', namesOn: names !== null },
+    status: {
+      ...status,
+      backend: backend?.name ?? 'none',
+      namesOn: names !== null,
+      conflictsOn: conflicts !== null,
+      simulatorOn: Boolean(findPage('simulator')),
+    },
   }
 }
 
@@ -90,16 +96,22 @@ function pauseWhileOpen(win) {
   win.on('closed', () => {
     pausedBy.delete(id)
     applyCorrection()
+    broadcast()
   })
 }
 
+// Takes a snapshot without Photon's own panel in it. The panel stays open
+// on screen; it is only excluded from capture for the moment of the read.
 async function takeSnapshot() {
-  // Keep Photon's own panel out of the picture.
-  if (panel?.isVisible()) {
-    panel.hide()
-    await sleep(150)
+  const open = panel && !panel.isDestroyed() && panel.isVisible()
+  if (!open) return capture.snapshot()
+  panel.setContentProtection(true)
+  try {
+    await sleep(60)
+    return await capture.snapshot()
+  } finally {
+    panel.setContentProtection(false)
   }
-  return capture.snapshot()
 }
 
 function rememberSnapshot({ bitmap, size }) {
@@ -124,7 +136,6 @@ async function openSimulator() {
 }
 
 function openTest() {
-  panel?.hide()
   const open = findPage('test')
   if (open) return open.focus()
   const win = createTest()
@@ -142,11 +153,10 @@ function stopNames() {
 
 // Color names: while the mode is on, resting the cursor for DWELL_MS shows
 // the name of the color under it. Moving the cursor hides the label again.
-const DWELL_MS = 3000
+const DWELL_MS = 2000
 
 function toggleNames() {
   if (names) return stopNames()
-  panel?.hide()
   const live = { win: createNamesLabel(), dwell: createDwell(DWELL_MS), busy: false, timer: null }
   names = live
 
@@ -160,10 +170,12 @@ function toggleNames() {
       if (!rgb || names !== live || live.win.isDestroyed() || moved) return
       const { bounds } = screen.getDisplayNearestPoint(cursor)
 
-      // Sit below and right of the cursor, flipping at the screen edges.
+      // Sit right beside the cursor, below and to its right, flipping at the
+      // screen edges.
       const [w, h] = live.win.getSize()
-      const x = cursor.x + 20 + w > bounds.x + bounds.width ? cursor.x - 20 - w : cursor.x + 20
-      const y = cursor.y + 20 + h > bounds.y + bounds.height ? cursor.y - 20 - h : cursor.y + 20
+      const gap = 10
+      const x = cursor.x + gap + w > bounds.x + bounds.width ? cursor.x - gap - w : cursor.x + gap
+      const y = cursor.y + gap + h > bounds.y + bounds.height ? cursor.y - gap - h : cursor.y + gap
       live.win.setPosition(x, y)
       live.win.webContents.send('names:update', { rgb, name: colorName(rgb), hex: toHex(rgb) })
       live.win.showInactive()
@@ -189,6 +201,7 @@ function closeConflicts() {
   globalShortcut.unregister('Escape')
   if (!conflicts.isDestroyed()) conflicts.destroy()
   conflicts = null
+  broadcast()
 }
 
 async function toggleConflicts() {
@@ -200,7 +213,10 @@ async function toggleConflicts() {
   conflicts.on('closed', () => {
     globalShortcut.unregister('Escape')
     conflicts = null
+    broadcast()
   })
+  // Keep the panel usable above the overlay.
+  if (panel?.isVisible()) panel.moveTop()
 }
 
 const actions = {
@@ -314,7 +330,12 @@ async function start() {
   } catch (error) {
     status.backendError = error.message
   }
-  capture = await createCapture({ backend, isCorrecting, reapply: applyCorrection })
+  capture = await createCapture({
+    backend,
+    isCorrecting,
+    reapply: applyCorrection,
+    currentTransform: () => (isCorrecting() ? correct(settings.type, settings.severity, settings.boost) : null),
+  })
 
   registerIpc()
   status.shortcutErrors = registerShortcuts({
@@ -326,6 +347,8 @@ async function start() {
 
   createTray()
   panel = createPanel()
+  // The panel stays open while its features are switched on and off, and
+  // hides (it does not quit) as soon as the user clicks anywhere else.
   panel.on('blur', () => {
     if (!panel.webContents.isDevToolsOpened()) panel.hide()
   })
@@ -344,7 +367,16 @@ async function start() {
 
   if (process.env.PHOTON_SELFTEST === '1') {
     const { runSelfTest } = await import('./selftest.js')
-    runSelfTest({ backend, capture, getState: currentState, updateSettings, run, isCorrecting })
+    runSelfTest({
+      backend,
+      capture,
+      getState: currentState,
+      updateSettings,
+      run,
+      isCorrecting,
+      getPanel: () => panel,
+      takeSnapshot,
+    })
   }
 }
 

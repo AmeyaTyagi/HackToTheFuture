@@ -17,7 +17,7 @@ photon.on('names:update', show)
 
 if (inBrowser) {
   document.documentElement.classList.add('in-browser')
-  showBrowserBanner('Sample image. Rest the pointer on a color for 3 seconds to see its name.')
+  showBrowserBanner('Sample image. Rest the pointer on a color for 2 seconds to see its name.')
 
   const sample = makeSample()
   const canvas = $('sample')
@@ -27,7 +27,7 @@ if (inBrowser) {
   ctx.drawImage(sample, 0, 0)
 
   const label = $('label')
-  const DWELL_MS = 3000
+  const DWELL_MS = 2000
   let timer = null
   label.hidden = true
 
@@ -40,8 +40,8 @@ if (inBrowser) {
     const rgb = [...ctx.getImageData(x, y, 1, 1).data.slice(0, 3)]
     show({ rgb, name: colorName(rgb), hex: toHex(rgb) })
     label.hidden = false
-    label.style.left = `${Math.min(clientX + 20, window.innerWidth - label.offsetWidth - 8)}px`
-    label.style.top = `${Math.min(clientY + 20, window.innerHeight - label.offsetHeight - 8)}px`
+    label.style.left = `${Math.min(clientX + 14, window.innerWidth - label.offsetWidth - 8)}px`
+    label.style.top = `${Math.min(clientY + 14, window.innerHeight - label.offsetHeight - 8)}px`
   }
 
   // The label appears only after the pointer has rested, and hides on a move.

@@ -1,4 +1,14 @@
-export { TYPES, IDENTITY, simulate, correct, multiply, clampSeverity } from './matrices.js'
+export {
+  TYPES,
+  IDENTITY,
+  BOOST_MIN,
+  BOOST_MAX,
+  simulate,
+  correct,
+  multiply,
+  clampSeverity,
+  clampBoost,
+} from './matrices.js'
 export { applyMatrix, recolor, srgbToLinear, linearToSrgb, rgbToLab, rgbToHsl, deltaE, colorName, toHex } from './color.js'
 export {
   AXES,

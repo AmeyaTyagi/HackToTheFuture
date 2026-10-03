@@ -19,10 +19,16 @@ test('sanitize repairs each bad field', () => {
   assert.equal(sanitize({ severity: 'abc' }).severity, 0.8)
   assert.equal(sanitize({ type: 'blue' }).type, 'deutan')
   assert.equal(sanitize({ enabled: 'yes' }).enabled, false)
+  assert.equal(sanitize({ boost: 9 }).boost, 3)
+  assert.equal(sanitize({ boost: 0 }).boost, 1)
+  assert.equal(sanitize({ boost: 'max' }).boost, 2)
+  assert.equal(sanitize({ boost: null }).boost, 2)
+  // A settings file saved before Boost existed.
+  assert.equal(sanitize({ enabled: true, type: 'protan', severity: 0.5 }).boost, 2)
 })
 
 test('sanitize passes valid settings through', () => {
-  const valid = { enabled: true, type: 'tritan', severity: 0.35 }
+  const valid = { enabled: true, type: 'tritan', severity: 0.35, boost: 1.5 }
   assert.deepEqual(sanitize(valid), valid)
 })
 
@@ -30,12 +36,12 @@ test('load survives a corrupt file and round-trips a saved one', () => {
   const dir = mkdtempSync(join(tmpdir(), 'photon-'))
   const file = join(dir, 'nested', 'settings.json')
   assert.deepEqual(load(file), DEFAULTS)
-  save(file, { enabled: true, type: 'protan', severity: 0.5 })
-  assert.deepEqual(load(file), { enabled: true, type: 'protan', severity: 0.5 })
+  save(file, { enabled: true, type: 'protan', severity: 0.5, boost: 3 })
+  assert.deepEqual(load(file), { enabled: true, type: 'protan', severity: 0.5, boost: 3 })
   writeFileSync(file, '{ not json')
   assert.deepEqual(load(file), DEFAULTS)
   save(file, { type: 'blue', severity: 99 })
-  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), { enabled: false, type: 'deutan', severity: 1 })
+  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), { enabled: false, type: 'deutan', severity: 1, boost: 2 })
 })
 
 test('toMagMatrix maps the identity to the 5x5 identity', () => {

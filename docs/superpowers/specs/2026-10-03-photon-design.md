@@ -118,8 +118,13 @@ Pure functions, unit tested.
   the Machado, Oliveira and Fernandes (2009) matrices, tabulated at severity
   0, 0.5 and 1.0 and linearly interpolated between them. For `achroma`, blends
   the identity matrix toward the Rec. 709 luminance matrix by severity.
-- `correct(type, severity) -> { matrix: 3x3, offset: [r, g, b] }`
-  The transform Photon applies to the screen.
+- `correct(type, severity, boost = 1) -> { matrix: 3x3, offset: [r, g, b] }`
+  The transform Photon applies to the screen. `boost`, from 1 to 3,
+  multiplies how far confusable colors are pushed apart:
+  `C = I + boost x E (I - S)`. Grays are unchanged at any boost, so text
+  and backgrounds keep their look. The default is 2, chosen so the
+  difference is plain in a demo; at full deutan severity it raises the
+  simulated red-green difference from deltaE 53 to 80.
   - `protan`, `deutan`, `tritan`: daltonization, `C = I + E (I - S)`, where
     `S = simulate(type, severity)` and `E` moves the lost information into
     channels the person can see (red-green error into blue and green for
@@ -200,7 +205,7 @@ rather than probed at every launch, because probing would flash the screen.
 A JSON file in Electron's `userData` folder:
 
 ```json
-{ "enabled": false, "type": "deutan", "severity": 0.8 }
+{ "enabled": false, "type": "deutan", "severity": 0.8, "boost": 2 }
 ```
 
 Loaded at launch, saved on every change. A missing or unreadable file falls
@@ -222,14 +227,19 @@ read. If a shortcut fails to register, the panel shows which one.
 
 ### Control panel
 
-A small window opened from the tray icon, anchored near it, hidden when it
-loses focus.
+A small window opened from the tray icon, anchored near it. It stays open
+while its features are switched on and off, and hides as soon as the user
+clicks anywhere outside it. Hiding never quits Photon; the tray icon brings
+the panel back. It can also be hidden with its Hide button or Esc. Each tool row is a toggle and shows "On" while its
+feature is active. The panel is excluded from snapshots for the moment of
+the read, so it never appears in the judge view or the conflict scan.
 
 Contents, top to bottom:
 
 - App name and an on/off switch
 - Segmented control for the four types
 - Severity slider, 0 to 100
+- Boost slider, 1x to 3x
 - Buttons: Take vision test, Judge view, Color names, Find conflicts
 - A status line for errors and for the achromatopsia limit
 
@@ -251,19 +261,41 @@ Purpose: let a person with normal vision see the benefit.
     `S x C x pixel`.
 - A control at the top switches the left side between "Without Photon" and
   "Normal vision", so judges can also compare against the original.
+- A Boost slider in the same bar changes the correction live and saves
+  the setting, so the real screen matches what was shown.
+- A switch between "My screen" and "Demo image". The demo image is a mock
+  dashboard drawn in code, full of the color pairs most often confused
+  (red and green bars, lines and status badges, a traffic light), so the
+  comparison is striking whatever happens to be on screen.
 - Both sides are drawn on canvases using the engine. Esc closes it.
 
 ### Color names
 
 - The shortcut toggles the mode on and off.
 - While the mode is on, nothing is shown as long as the cursor is moving.
-  When the cursor has rested within 3 pixels of one spot for 3 seconds, a
-  small rounded label appears beside it showing a swatch, the color's name,
+  When the cursor has rested within 3 pixels of one spot for 2 seconds, a
+  small rounded label appears right beside it showing a swatch, the color's name,
   and its hex code. Moving the cursor hides the label again.
-- The color is read from the screen at the moment the label appears, so it
-  names what is on screen now. It is the true color, not the corrected one.
-- With correction on, that read lifts correction for a moment, which shows
-  as one brief flicker each time a name appears.
+- The color is the exact pixel under the tip of the cursor (its position
+  is taken from Windows in physical pixels), read at the moment the label
+  appears. It is the true color, not the corrected one, and never an
+  estimate:
+  - With correction off, the screen pixel is read directly.
+  - With correction on, the screen shows corrected colors, so the color is
+    taken from the window under the cursor, which draws its own picture
+    unaffected by correction (`PrintWindow`). Nothing on screen changes.
+    The answer is accepted only if running it through the current
+    correction reproduces what the screen shows at that pixel, within 4
+    per channel for rounding.
+  - If that check fails (a see-through window, a window that will not
+    draw), correction is lifted for about 50 ms and the screen pixel is
+    read directly. This is the only case with a visible flicker.
+  - Recovering the true color by inverting the correction was measured and
+    rejected: it names the color correctly only 60 to 80% of the time,
+    because strong corrections push colors past what the screen can show.
+- The hex code shown is exact. The name is a description of that color:
+  a brightness word plus a color family, with everyday names for brown,
+  olive, tan, beige, pink, teal and purple.
 
 ### Vision test
 

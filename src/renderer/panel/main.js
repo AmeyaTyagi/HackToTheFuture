@@ -5,7 +5,7 @@ const mod = photon.platform === 'darwin' ? '⌘⌥' : 'Ctrl+Alt+'
 
 if (inBrowser) {
   document.documentElement.classList.add('in-browser')
-  $('quit').hidden = true
+  $('quit').parentElement.hidden = true
 }
 showBrowserBanner()
 
@@ -27,8 +27,17 @@ function render({ settings, status }) {
   $('severity').style.setProperty('--fill-pct', `${percent}%`)
   $('severity-value').textContent = `${percent}%`
 
-  $('names').setAttribute('aria-pressed', String(status.namesOn))
-  $('names').querySelector('kbd').textContent = status.namesOn ? 'On' : `${mod}C`
+  if (document.activeElement !== $('boost')) $('boost').value = settings.boost
+  $('boost').style.setProperty('--fill-pct', `${((settings.boost - 1) / 2) * 100}%`)
+  $('boost-value').textContent = `${settings.boost.toFixed(1)}×`
+
+  // Each tool is a toggle: its shortcut is shown when off, "On" when on.
+  const tools = { names: ['namesOn', 'C'], conflicts: ['conflictsOn', 'F'], simulator: ['simulatorOn', 'S'] }
+  for (const [id, [flag, key]] of Object.entries(tools)) {
+    const on = Boolean(status[flag])
+    $(id).setAttribute('aria-pressed', String(on))
+    $(id).querySelector('kbd').textContent = on ? 'On' : `${mod}${key}`
+  }
 
   renderStatus(settings, status)
 }
@@ -50,7 +59,7 @@ function renderStatus(settings, status) {
   } else if (status.shortcutErrors.length) {
     el.textContent = `Another app is using ${status.shortcutErrors.join(', ')}, so that shortcut is unavailable.`
   } else if (status.namesOn) {
-    el.textContent = 'Color names is on. Rest the pointer on a color for 3 seconds to see its name.'
+    el.textContent = 'Color names is on. Rest the pointer on a color for 2 seconds to see its name.'
   } else if (settings.type === 'achroma') {
     el.textContent = 'Color cannot be restored for monochrome vision. Photon raises contrast instead; Color names tells you what a color is.'
   }
@@ -67,11 +76,16 @@ $('severity').addEventListener('input', (event) => {
   photon.setSettings({ severity: Number(event.target.value) / 100 }).then(render)
 })
 
+$('boost').addEventListener('input', (event) => {
+  photon.setSettings({ boost: Number(event.target.value) }).then(render)
+})
+
 for (const button of document.querySelectorAll('[data-action]')) {
   button.addEventListener('click', () => photon.run(button.dataset.action))
 }
 
 $('quit').addEventListener('click', () => photon.quit())
+$('hide').addEventListener('click', () => photon.close())
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') photon.close()
 })
