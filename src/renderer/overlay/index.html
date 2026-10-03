@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Photon Overlay</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      video {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="screen"></canvas>
+    <video id="video" muted playsinline></video>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

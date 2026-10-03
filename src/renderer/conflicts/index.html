@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Photon Conflict Finder</title>
+    <link rel="stylesheet" href="../shared/apple.css" />
+    <style>
+      body {
+        background: transparent;
+        overflow: hidden;
+      }
+      #backdrop,
+      #outlines {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      /* Only shown in a browser, where there is no real screen underneath. */
+      #backdrop {
+        display: none;
+      }
+      html.in-browser #backdrop {
+        display: block;
+      }
+      .badge {
+        position: fixed;
+        transform: translate(-50%, -50%);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px 4px 4px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        background: rgba(28, 28, 30, 0.92);
+        box-shadow: 0 0 0 1.5px #fff, 0 4px 14px rgba(0, 0, 0, 0.5);
+        white-space: nowrap;
+        text-transform: capitalize;
+      }
+      .number {
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        color: #1d1d1f;
+        background: #fff;
+        font-variant-numeric: tabular-nums;
+      }
+      #legend {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        min-width: 300px;
+        max-width: calc(100vw - 32px);
+        padding: 14px 16px;
+        border-radius: 16px;
+        color: #fff;
+        background: rgba(28, 28, 30, 0.92);
+        box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.3), 0 10px 40px rgba(0, 0, 0, 0.5);
+      }
+      #legend h1 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      #legend ul {
+        list-style: none;
+        margin: 8px 0;
+        padding: 0;
+      }
+      #legend li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+        font-size: 13px;
+      }
+      .swatch {
+        width: 18px;
+        height: 18px;
+        flex: none;
+        border-radius: 5px;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+      }
+      #legend p {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.66);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="backdrop"></canvas>
+    <canvas id="outlines"></canvas>
+    <div id="badges"></div>
+    <div id="legend" role="status">
+      <h1 id="title">Scanning the screen…</h1>
+      <ul id="pairs"></ul>
+      <p id="hint"></p>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

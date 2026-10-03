@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Photon Judge View</title>
+    <link rel="stylesheet" href="../shared/apple.css" />
+    <style>
+      body {
+        background: #000;
+        overflow: hidden;
+      }
+      #stage {
+        position: fixed;
+        inset: 0;
+        touch-action: none;
+      }
+      canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      #divider {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 44px;
+        margin-left: -22px;
+        cursor: ew-resize;
+      }
+      #divider::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        margin-left: -1.5px;
+        background: #fff;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 0 12px rgba(0, 0, 0, 0.5);
+      }
+      #divider::after {
+        content: '‹ ›';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 44px;
+        height: 44px;
+        margin: -22px 0 0 -22px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        font-size: 17px;
+        font-weight: 600;
+        color: #1d1d1f;
+        background: #fff;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+      }
+      .pill {
+        position: absolute;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.62);
+        backdrop-filter: blur(24px) saturate(180%);
+      }
+      #left-label {
+        left: 20px;
+        bottom: 20px;
+      }
+      #right-label {
+        right: 20px;
+        bottom: 20px;
+      }
+      #bar {
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        max-width: calc(100vw - 32px);
+        padding: 8px;
+        border-radius: 16px;
+        color: #fff;
+        background: rgba(40, 40, 44, 0.72);
+        backdrop-filter: blur(30px) saturate(180%);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      }
+      #bar .segmented {
+        background: rgba(120, 120, 128, 0.36);
+      }
+      #bar .segmented button {
+        color: #fff;
+        white-space: nowrap;
+      }
+      #bar .segmented button[aria-pressed='true'] {
+        color: #1d1d1f;
+        background: #fff;
+      }
+      #close {
+        border: 0;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        font-size: 15px;
+        color: #fff;
+        background: rgba(120, 120, 128, 0.36);
+        cursor: pointer;
+      }
+      #message {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        font-size: 17px;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <canvas id="right"></canvas>
+      <canvas id="left"></canvas>
+      <div id="divider" role="slider" tabindex="0" aria-label="Before and after divider" aria-valuemin="0" aria-valuemax="100"></div>
+      <div class="pill" id="left-label"></div>
+      <div class="pill" id="right-label">With Photon</div>
+      <div id="bar">
+        <div class="segmented" id="types" aria-label="Vision type">
+          <button data-type="protan">Protan</button>
+          <button data-type="deutan">Deutan</button>
+          <button data-type="tritan">Tritan</button>
+          <button data-type="achroma">Monochrome</button>
+        </div>
+        <div class="segmented" id="left-mode" aria-label="Left side shows">
+          <button data-mode="without">Without Photon</button>
+          <button data-mode="normal">Normal vision</button>
+        </div>
+        <button id="close" aria-label="Close">✕</button>
+      </div>
+      <div id="message">Preparing the judge view…</div>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

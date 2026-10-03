@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Photon Vision Test</title>
+    <link rel="stylesheet" href="../shared/apple.css" />
+    <style>
+      body {
+        display: grid;
+        place-items: center;
+        padding: 20px 16px;
+      }
+      main {
+        width: min(480px, 100%);
+        text-align: center;
+      }
+      section[hidden] {
+        display: none;
+      }
+      h1 {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+      }
+      .lede {
+        font-size: 15px;
+        color: var(--text-2);
+        margin-bottom: 20px;
+      }
+      .steps {
+        text-align: left;
+        padding: 4px 16px;
+        margin-bottom: 20px;
+        font-size: 15px;
+      }
+      .steps p {
+        padding: 11px 0;
+        border-bottom: 0.5px solid var(--line);
+      }
+      .steps p:last-child {
+        border-bottom: 0;
+      }
+      #progress {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-2);
+        margin-bottom: 10px;
+      }
+      #plate {
+        width: min(360px, 100%);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        /* Always light, so plates look the same in light and dark themes. */
+        background: #f7f5f0;
+        box-shadow: var(--shadow);
+      }
+      #question {
+        font-size: 17px;
+        font-weight: 600;
+        margin: 14px 0 10px;
+      }
+      #keypad {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      #keypad button {
+        border: 0;
+        height: 44px;
+        border-radius: 10px;
+        font: inherit;
+        font-size: 20px;
+        font-weight: 500;
+        color: var(--text);
+        background: var(--card-solid);
+        box-shadow: 0 0 0 0.5px var(--line);
+        cursor: pointer;
+      }
+      #keypad button:active {
+        background: var(--fill);
+      }
+      #keypad button:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
+        outline-offset: 2px;
+      }
+      #nothing {
+        width: 100%;
+      }
+      #result-detail {
+        font-size: 17px;
+        margin-bottom: 20px;
+      }
+      .actions {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .fine {
+        font-size: 12px;
+        color: var(--text-2);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section id="intro">
+        <h1>Vision test</h1>
+        <p class="lede">Ten quick plates. Photon uses your answers to set itself up for your eyes.</p>
+        <div class="card steps">
+          <p>Each plate is a circle of dots that may hide a single number.</p>
+          <p>Press the number you see, or say that you can't see one.</p>
+          <p>Don't study a plate for long. Your first impression is the right answer.</p>
+        </div>
+        <button class="button" id="start">Start</button>
+        <p class="fine" style="margin-top: 20px">Color correction is paused while this window is open.</p>
+      </section>
+
+      <section id="quiz" hidden>
+        <p id="progress"></p>
+        <canvas id="plate" width="720" height="720" aria-label="Test plate"></canvas>
+        <p id="question">Which number do you see?</p>
+        <div id="keypad"></div>
+        <button class="button secondary" id="nothing">I can't see a number</button>
+      </section>
+
+      <section id="result" hidden>
+        <h1 id="result-title"></h1>
+        <p id="result-detail"></p>
+        <div class="actions">
+          <button class="button" id="apply">Apply to Photon</button>
+          <button class="button secondary" id="retry">Take it again</button>
+          <button class="button secondary" id="done">Done</button>
+        </div>
+        <p class="fine">
+          This is a screening aid, not a medical diagnosis. Screen brightness, room lighting and display quality all
+          affect it. An optometrist can test your color vision properly.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
