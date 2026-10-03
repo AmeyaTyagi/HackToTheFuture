@@ -36,11 +36,8 @@ function render({ settings, status }) {
   // Leave the slider alone while it is being dragged.
   if (document.activeElement !== $('severity')) $('severity').value = percent
   $('severity').style.setProperty('--fill-pct', `${percent}%`)
+  $('severity').style.setProperty('--fill-n', String(settings.severity))
   $('severity-value').textContent = `${percent}%`
-
-  if (document.activeElement !== $('boost')) $('boost').value = settings.boost
-  $('boost').style.setProperty('--fill-pct', `${((settings.boost - 1) / 2) * 100}%`)
-  $('boost-value').textContent = `${settings.boost.toFixed(1)}×`
 
   // Each tool is a toggle: its shortcut is shown when off, "On" when on.
   const tools = { names: ['namesOn', 'C'], conflicts: ['conflictsOn', 'F'], simulator: ['simulatorOn', 'S'] }
@@ -85,10 +82,6 @@ $('types').addEventListener('click', (event) => {
 
 $('severity').addEventListener('input', (event) => {
   photon.setSettings({ severity: Number(event.target.value) / 100 }).then(render)
-})
-
-$('boost').addEventListener('input', (event) => {
-  photon.setSettings({ boost: Number(event.target.value) }).then(render)
 })
 
 for (const button of document.querySelectorAll('[data-action]')) {

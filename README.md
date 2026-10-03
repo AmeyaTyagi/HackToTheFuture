@@ -37,9 +37,8 @@ Photon lives in the system tray. Click its ring icon to open the panel.
 | Ctrl+Alt+C / Cmd+Option+C | Color names: rest the cursor on a color for 2 seconds to see its name |
 | Ctrl+Alt+F / Cmd+Option+F | Find colors on screen that look alike to you |
 
-The panel has two sliders. Strength is how strong the person's color
-blindness is; the vision test sets it. Boost is how far Photon pushes
-confusable colors apart, from 1x to 3x.
+The Strength slider is how strong the person's color blindness is; the
+vision test sets it.
 
 If the screen ever becomes hard to read, the first shortcut switches
 correction off. Quitting Photon always restores the screen.
@@ -70,6 +69,22 @@ The Mac path was written on Windows and has not been run on a Mac yet.
 
 If the overlay films itself, every other feature still works; only live
 correction is affected.
+
+## Does it help?
+
+`tests/audit.test.js` counts, for a simulated color blind viewer, how many
+pairs of clearly different real-world colors look the same, with Photon off
+and on. At full strength on two sets of chart, status and web colors:
+
+| Type | Set A | Set B |
+|---|---|---|
+| Deutan | 45 to 26 | 44 to 31 |
+| Protan | 48 to 22 | 38 to 28 |
+| Tritan | 16 to 4 | 31 to 12 |
+
+From 60% strength up, the full correction is never worse than no correction
+on either set. The numbers come from a model of color blindness, not from
+color blind people, and nobody color blind has tried Photon yet.
 
 ## Limits
 

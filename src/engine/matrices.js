@@ -25,28 +25,33 @@ const MACHADO = {
 // Rec. 709 luminance, repeated on every row: what full achromatopsia sees.
 const LUMINANCE = [0.2126, 0.7152, 0.0722, 0.2126, 0.7152, 0.0722, 0.2126, 0.7152, 0.0722]
 
-// Where daltonization sends the color information the viewer cannot see.
-const ERROR_SHIFT = {
-  protan: [0, 0, 0, 0.7, 1, 0, 0.7, 0, 1],
-  deutan: [0, 0, 0, 0.7, 1, 0, 0.7, 0, 1],
-  tritan: [1, 0, 0.7, 0, 1, 0.7, 0, 0, 0],
+// The correction adds the signal the viewer cannot see back into the
+// picture where they can see it. The signal is one number per color: how
+// much one channel of the viewer's picture differs from a normal viewer's
+// (`row`: 0 red, 1 green). `weights` says how much of it goes into red,
+// green and blue.
+//
+// These values were found by search, not taken from a textbook. The
+// textbook choice (send the error into green and blue at 0.7) separated red
+// from green but made more other color pairs confusable than it fixed. The
+// search scored every candidate on 107 colors from real chart, status,
+// brand and web palettes plus black, white and grays, and kept only those
+// that, at 60%, 80% and 100% strength, are never worse than no correction
+// and keep red and green visible on dark and light backgrounds.
+// tests/audit.test.js holds the colors and re-checks all of it.
+//
+// For deutan, reds lose their green and greens gain it, so reds stay red,
+// greens turn brighter, and the two differ in brightness.
+const SHIFT = {
+  deutan: { row: 0, weights: [0, -1, 0] },
+  protan: { row: 1, weights: [-0.5, 1.5, 2.5] },
+  tritan: { row: 1, weights: [-3, 1, -3] },
 }
 
 export function clampSeverity(severity) {
   const n = Number(severity)
   if (!Number.isFinite(n)) return 0
   return Math.min(1, Math.max(0, n))
-}
-
-// Boost is how hard the correction pushes confusable colors apart:
-// 1 is the standard amount, 3 the most.
-export const BOOST_MIN = 1
-export const BOOST_MAX = 3
-
-export function clampBoost(boost) {
-  const n = Number(boost)
-  if (!Number.isFinite(n)) return BOOST_MIN
-  return Math.min(BOOST_MAX, Math.max(BOOST_MIN, n))
 }
 
 function lerp(a, b, t) {
@@ -74,18 +79,23 @@ export function simulate(type, severity) {
 }
 
 // The transform Photon applies to the screen. Offset is in 0..1 units.
-export function correct(type, severity, boost = 1) {
+export function correct(type, severity) {
   const s = clampSeverity(severity)
-  const push = clampBoost(boost)
   if (type === 'achroma') {
     // Color cannot be restored, so stretch contrast around mid-gray instead.
-    const k = 1 + 0.5 * s * (1 + (push - 1) / 2)
+    const k = 1 + 0.75 * s
     const shift = 0.5 * (1 - k)
     return { matrix: IDENTITY.map((v) => v * k), offset: [shift, shift, shift] }
   }
-  const shift = ERROR_SHIFT[type]
+  const shift = SHIFT[type]
   if (!shift) return { matrix: [...IDENTITY], offset: [0, 0, 0] }
-  const lost = simulate(type, s).map((v, i) => IDENTITY[i] - v)
-  const matrix = multiply(shift, lost).map((v, i) => v * push + IDENTITY[i])
+  const seen = simulate(type, s)
+  // The lost signal, as a combination of r, g and b. It is zero for any
+  // gray, so grays, black and white pass through unchanged.
+  const lost = [0, 1, 2].map((col) => IDENTITY[shift.row * 3 + col] - seen[shift.row * 3 + col])
+  const matrix = [...IDENTITY]
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) matrix[row * 3 + col] += shift.weights[row] * lost[col]
+  }
   return { matrix, offset: [0, 0, 0] }
 }

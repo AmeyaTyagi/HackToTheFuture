@@ -56,12 +56,6 @@ test('deutan correction pulls a red-green pair apart', () => {
   assert.ok(separation('deutan', 1, a, b, true) > separation('deutan', 1, a, b, false))
 })
 
-test('protan correction pulls a red-green pair apart', () => {
-  const a = [200, 60, 40]
-  const b = [110, 130, 40]
-  assert.ok(separation('protan', 1, a, b, true) > separation('protan', 1, a, b, false))
-})
-
 test('tritan correction pulls a blue-green pair apart', () => {
   const a = [60, 90, 200]
   const b = [60, 150, 120]
@@ -162,30 +156,9 @@ test('toHex is the exact color', () => {
   assert.equal(toHex([1, 2, 3]), '#010203')
 })
 
-// ---- Boost ----------------------------------------------------------------
-
-test('boost of 1, or none given, is the standard correction', () => {
-  for (const type of TYPES) close(correct(type, 0.8, 1).matrix, correct(type, 0.8).matrix)
-})
-
-test('boost pushes confusable colors further apart', () => {
-  const red = [224, 49, 49]
-  const green = [47, 158, 68]
-  for (const type of ['deutan', 'protan']) {
-    const s = simulate(type, 1)
-    const apart = (boost) => {
-      const c = correct(type, 1, boost)
-      const see = (rgb) => applyMatrix(s, ZERO, applyMatrix(c.matrix, c.offset, rgb))
-      return deltaE(see(red), see(green))
-    }
-    assert.ok(apart(2) > apart(1) + 10, `${type}: ${apart(1)} then ${apart(2)}`)
-    assert.ok(apart(3) > apart(2), type)
-  }
-})
-
-test('boost leaves grays gray, so text and backgrounds keep their look', () => {
+test('correction leaves grays gray, so text and backgrounds keep their look', () => {
   for (const type of ['protan', 'deutan', 'tritan']) {
-    const c = correct(type, 1, 3)
+    const c = correct(type, 1)
     for (const gray of [[0, 0, 0], [128, 128, 128], [255, 255, 255]]) {
       const out = applyMatrix(c.matrix, c.offset, gray)
       for (let i = 0; i < 3; i++) assert.ok(Math.abs(out[i] - gray[i]) <= 1, `${type} ${gray}: ${out}`)
@@ -193,16 +166,14 @@ test('boost leaves grays gray, so text and backgrounds keep their look', () => {
   }
 })
 
-test('boost does nothing at severity 0', () => {
-  for (const type of TYPES) {
-    const c = correct(type, 0, 3)
-    assert.deepEqual(applyMatrix(c.matrix, c.offset, [200, 30, 30]), [200, 30, 30])
+test('correction separates red and green for deutan and protan vision', () => {
+  const red = [224, 49, 49]
+  const green = [47, 158, 68]
+  for (const type of ['deutan', 'protan']) {
+    const s = simulate(type, 1)
+    const c = correct(type, 1)
+    const see = (rgb) => applyMatrix(s, ZERO, applyMatrix(c.matrix, c.offset, rgb))
+    const without = deltaE(applyMatrix(s, ZERO, red), applyMatrix(s, ZERO, green))
+    assert.ok(deltaE(see(red), see(green)) > without + 10, `${type}: ${without} then ${deltaE(see(red), see(green))}`)
   }
-})
-
-test('boost outside 1..3 and non-numbers are clamped', () => {
-  close(correct('deutan', 1, 99).matrix, correct('deutan', 1, 3).matrix)
-  close(correct('deutan', 1, -4).matrix, correct('deutan', 1, 1).matrix)
-  close(correct('deutan', 1, NaN).matrix, correct('deutan', 1, 1).matrix)
-  close(correct('deutan', 1, 'lots').matrix, correct('deutan', 1, 1).matrix)
 })

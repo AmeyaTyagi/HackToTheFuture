@@ -9,7 +9,7 @@ const PAGES = { simulator: 'simulator', test: 'test', conflicts: 'conflicts', na
 const STORE = 'photon-browser-settings'
 
 function createStub() {
-  let settings = { enabled: false, type: 'deutan', severity: 0.8, boost: 2 }
+  let settings = { enabled: false, type: 'deutan', severity: 0.8 }
   try {
     settings = { ...settings, ...JSON.parse(sessionStorage.getItem(STORE)) }
   } catch {

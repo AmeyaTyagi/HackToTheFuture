@@ -1,8 +1,8 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { TYPES, clampSeverity, clampBoost } from '../engine/index.js'
+import { TYPES, clampSeverity } from '../engine/index.js'
 
-export const DEFAULTS = { enabled: false, type: 'deutan', severity: 0.8, boost: 2 }
+export const DEFAULTS = { enabled: false, type: 'deutan', severity: 0.8 }
 
 // Turns anything (a hand-edited file, a partial update) into valid settings.
 export function sanitize(raw) {
@@ -12,7 +12,6 @@ export function sanitize(raw) {
     enabled: input.enabled === true,
     type: TYPES.includes(input.type) ? input.type : DEFAULTS.type,
     severity: Number.isFinite(severity) ? clampSeverity(severity) : DEFAULTS.severity,
-    boost: Number.isFinite(Number(input.boost)) && input.boost !== null ? clampBoost(input.boost) : DEFAULTS.boost,
   }
 }
 

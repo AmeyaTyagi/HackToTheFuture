@@ -57,7 +57,7 @@ function isCorrecting() {
 
 function applyCorrection() {
   if (!backendReady) return
-  if (isCorrecting()) backend.apply(correct(settings.type, settings.severity, settings.boost))
+  if (isCorrecting()) backend.apply(correct(settings.type, settings.severity))
   else backend.clear()
 }
 
@@ -347,7 +347,7 @@ async function start() {
     backend,
     isCorrecting,
     reapply: applyCorrection,
-    currentTransform: () => (isCorrecting() ? correct(settings.type, settings.severity, settings.boost) : null),
+    currentTransform: () => (isCorrecting() ? correct(settings.type, settings.severity) : null),
   })
 
   registerIpc()

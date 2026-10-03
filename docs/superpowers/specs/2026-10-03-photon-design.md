@@ -118,19 +118,43 @@ Pure functions, unit tested.
   the Machado, Oliveira and Fernandes (2009) matrices, tabulated at severity
   0, 0.5 and 1.0 and linearly interpolated between them. For `achroma`, blends
   the identity matrix toward the Rec. 709 luminance matrix by severity.
-- `correct(type, severity, boost = 1) -> { matrix: 3x3, offset: [r, g, b] }`
-  The transform Photon applies to the screen. `boost`, from 1 to 3,
-  multiplies how far confusable colors are pushed apart:
-  `C = I + boost x E (I - S)`. Grays are unchanged at any boost, so text
-  and backgrounds keep their look. The default is 2, chosen so the
-  difference is plain in a demo; at full deutan severity it raises the
-  simulated red-green difference from deltaE 53 to 80.
-  - `protan`, `deutan`, `tritan`: daltonization, `C = I + E (I - S)`, where
-    `S = simulate(type, severity)` and `E` moves the lost information into
-    channels the person can see (red-green error into blue and green for
-    protan and deutan; blue-yellow error into red and green for tritan).
-    Offset is zero.
-  - `achroma`: color cannot be restored. Applies a contrast boost around
+- `correct(type, severity) -> { matrix: 3x3, offset: [r, g, b] }`
+  The transform Photon applies to the screen.
+  - `protan`, `deutan`, `tritan`: the signal the viewer cannot see is
+    added back where they can see it. The signal is one number per color:
+    how much one channel of the viewer's picture differs from a normal
+    viewer's. Per type, a row (which channel) and three weights (how much
+    of the signal goes into red, green and blue):
+    `C = I + weights (x) (I - S)[row]`. Grays, black and white
+    are unchanged. For deutan (row red, weights 0, -1, 0) reds lose their
+    green and greens gain it, so the two differ in brightness.
+  - **How the weights were chosen.** The first version used textbook
+    daltonization (send the error into green and blue at 0.7). An audit
+    showed it separated red from green but left more color pairs
+    confusable than it fixed. The weights were then found by search over
+    107 colors from real chart, status, brand and web palettes plus black,
+    white and grays, keeping only candidates that at 60%, 80% and 100%
+    strength are never worse than no correction and keep red and green
+    visible on dark and light backgrounds. `tests/audit.test.js` holds
+    the colors and re-checks this.
+  - **Measured effect**, as pairs of clearly different colors that look
+    the same to the viewer, without and with Photon, on the two color sets
+    at full strength: deutan 45 to 26 and 44 to 31; protan 48 to 22 and 38
+    to 28; tritan 16 to 4 and 31 to 12.
+  - **Limits.** A person missing one color sensor sees two dimensions of
+    color where others see three, so some colors must always collide; a
+    correction chooses which. On colors spread evenly over the whole color
+    space, including extreme ones, the correction does not reduce the
+    count. Below about 50% strength there is almost nothing to fix and the
+    correction can cost a pair or two. Both color sets were used in the
+    search, so the tests guard against regressions and are not an
+    independent validation. None of this has been tried by color blind
+    people.
+  - There was briefly a Boost setting that scaled the correction. It was
+    removed: once the weights were tuned, the full correction was the best
+    setting, and applying less of it was sometimes worse than applying
+    none.
+  - `achroma`: color cannot be restored. Applies a contrast stretch around
     mid-gray, scaled by severity. The panel states this limit.
 - `applyMatrix(matrix, offset, rgb) -> rgb` with clamping to 0..255.
 - `colorName(rgb) -> string`, such as "dark red". Built from hue, saturation
@@ -205,7 +229,7 @@ rather than probed at every launch, because probing would flash the screen.
 A JSON file in Electron's `userData` folder:
 
 ```json
-{ "enabled": false, "type": "deutan", "severity": 0.8, "boost": 2 }
+{ "enabled": false, "type": "deutan", "severity": 0.8 }
 ```
 
 Loaded at launch, saved on every change. A missing or unreadable file falls
@@ -239,7 +263,6 @@ Contents, top to bottom:
 - App name and an on/off switch
 - Segmented control for the four types
 - Severity slider, 0 to 100
-- Boost slider, 1x to 3x
 - Buttons: Take vision test, Judge view, Color names, Find conflicts
 - A status line for errors and for the achromatopsia limit
 
@@ -261,8 +284,6 @@ Purpose: let a person with normal vision see the benefit.
     `S x C x pixel`.
 - A control at the top switches the left side between "Without Photon" and
   "Normal vision", so judges can also compare against the original.
-- A Boost slider in the same bar changes the correction live and saves
-  the setting, so the real screen matches what was shown.
 - A switch between "My screen" and "Demo image". The demo image is a mock
   dashboard drawn in code, full of the color pairs most often confused
   (red and green bars, lines and status badges, a traffic light), so the

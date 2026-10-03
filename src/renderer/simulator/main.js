@@ -18,7 +18,6 @@ const TYPE_NAMES = { protan: 'protan', deutan: 'deutan', tritan: 'tritan', achro
 let source = null // ImageData of the true-color snapshot
 let type = 'deutan'
 let severity = 0.8
-let boost = 2
 let screenImage = null // the snapshot of the real screen, if there is one
 let sourceName = 'screen'
 let leftMode = 'without'
@@ -31,7 +30,7 @@ function put(canvas, pixels) {
 function draw() {
   if (!source) return
   const seen = { matrix: simulate(type, severity) }
-  put(right, recolor(source.data, [correct(type, severity, boost), seen]))
+  put(right, recolor(source.data, [correct(type, severity), seen]))
   put(left, leftMode === 'normal' ? new Uint8ClampedArray(source.data) : recolor(source.data, [seen]))
 
   const percent = Math.round(severity * 100)
@@ -46,9 +45,6 @@ function draw() {
   for (const button of $('source').children) {
     button.setAttribute('aria-pressed', String(button.dataset.source === sourceName))
   }
-  $('boost').value = boost
-  $('boost').style.setProperty('--fill-pct', `${((boost - 1) / 2) * 100}%`)
-  $('boost-value').textContent = `${boost.toFixed(1)}×`
 }
 
 // Loads a picture (an image or a canvas) as the thing being compared.
@@ -82,8 +78,6 @@ divider.addEventListener('pointermove', (event) => {
 
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') photon.close()
-  // Arrow keys on the Boost slider belong to the slider.
-  if (event.target === $('boost')) return
   if (event.key === 'ArrowLeft') setPosition(position - 0.02)
   if (event.key === 'ArrowRight') setPosition(position + 0.02)
 })
@@ -110,13 +104,6 @@ $('source').addEventListener('click', (event) => {
   setSource(sourceName === 'demo' || !screenImage ? makeSample() : screenImage)
 })
 
-// Boost here is saved, so the real screen correction matches what was shown.
-$('boost').addEventListener('input', (event) => {
-  boost = Number(event.target.value)
-  draw()
-  photon.setSettings({ boost })
-})
-
 $('close').addEventListener('click', () => photon.close())
 
 async function start() {
@@ -127,7 +114,6 @@ async function start() {
   // A strength of zero would show no difference at all.
   severity = settings.severity > 0 ? settings.severity : 1
 
-  boost = settings.boost ?? 2
 
   if (inBrowser) {
     // A browser has no real screen to show, only the demo image.

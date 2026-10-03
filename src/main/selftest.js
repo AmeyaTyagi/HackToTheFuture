@@ -110,18 +110,18 @@ export async function runSelfTest({
       const wrong = []
       const liftsBefore = capture.lifts
       for (const type of ['protan', 'deutan', 'tritan', 'achroma']) {
-        for (const boost of [1, 2, 3]) {
-          updateSettings({ enabled: true, type, severity: 1, boost })
+        for (const severity of [0.5, 0.8, 1]) {
+          updateSettings({ enabled: true, type, severity })
           await sleep(150)
           const a = await capture.pixelAtPhysical(red)
           const b = await capture.pixelAtPhysical(green)
-          if (String(a) !== '220,40,40') wrong.push(`${type} ${boost}x red read as ${a}`)
-          if (String(b) !== '40,160,60') wrong.push(`${type} ${boost}x green read as ${b}`)
+          if (String(a) !== '220,40,40') wrong.push(`${type} at ${severity * 100}% red read as ${a}`)
+          if (String(b) !== '40,160,60') wrong.push(`${type} at ${severity * 100}% green read as ${b}`)
         }
       }
-      check('colors are read exactly under every type and boost', wrong.length === 0, wrong.slice(0, 3).join('; '))
+      check('colors are read exactly under every type and strength', wrong.length === 0, wrong.slice(0, 3).join('; '))
       check('reading a color does not flicker the screen', capture.lifts === liftsBefore, `${capture.lifts - liftsBefore} flickers in 24 reads`)
-      updateSettings({ enabled: true, type: 'deutan', severity: 1, boost: before.boost })
+      updateSettings({ enabled: true, type: 'deutan', severity: 1 })
       await sleep(150)
     }
     card.destroy()
